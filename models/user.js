@@ -2,40 +2,47 @@ const mongoose = require('mongoose')
 
 // documents
 const userSchema = new mongoose.Schema({
-    name:String, 
-    lastname: String,
-    gender: Number,
-    age:Number,
-    address: String,
-    password: {
-        type: String,
-        required: true
-    },
-    email: {
-        type: String,
-        required: true,
-        unique: true
-    },    
-    role: {
-        type: String,
-        default: 'user'
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    verify: {
-        type: Boolean,
-        default: false
-    },
-    online: {
-        type: Boolean,
-        default: false
-
-    }  
-
-
-})
+  name: String,
+  lastname: String,
+  age: Number,
+  address: String,
+  gender: {
+    type: String,
+    enum: ['male', 'female', 'other'],
+    required: true,
+    
+  },
+  password: {
+    type: String,
+    required: true,
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],    
+    default: 'user',
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  verify: {
+    type: Boolean,
+    default: false,
+  },
+  online: {
+    type: Boolean,
+    default: false,
+  },
+  avatar: {
+    type: String,
+    default: 'default.png',
+  },
+});
 userSchema.set('toJSON', {
     transform: (document, returnedObject) => {
         returnedObject.id = returnedObject._id.toString();
