@@ -11,6 +11,7 @@ const logoutRouter = require('./controllers/logout');
 const perfilUserRouter = require('./controllers/perfilUser');
 const UploadRouter = require('./controllers/uploadProfileUser');
 const { usertExtractor } = require('./midlewares/auth');
+const categoryRouter = require('./controllers/category');
 
 // conexion base de datos
 (async () => {
@@ -37,7 +38,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/registration', usersRouter);
 app.use('/api/login', loginRouter);
 app.use('/api/logout', logoutRouter);
-app.use('/api/profile', perfilUserRouter)
-app.use('/api/upload', usertExtractor,UploadRouter )
+app.use('/api/profile', perfilUserRouter);
+app.use('/api/upload', usertExtractor, UploadRouter);
+app.use('/api/category', usertExtractor, categoryRouter);
 
 module.exports = app;
