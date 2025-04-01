@@ -4,8 +4,8 @@ const Category = require('../models/category');
 // mostrando todas las categorias
 
 categoryRouter.get('/', async (req, res) => {
-  const categories = await Category.find().populate('user', 'name');
-  console.log('las categias', categories);
+  const categories = await Category.find({}).populate('user', 'name');
+  console.log('las categorias', categories);
   res.json(categories);
 });
 
