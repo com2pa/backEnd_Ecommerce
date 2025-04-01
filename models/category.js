@@ -10,11 +10,17 @@ const categorySchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
+  subcategory: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref:'subcategory'
+    }
+  ],  
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-  },
+  }
 });
 categorySchema.set('toJSON', {
   transform: (document, returnedObject) => {
