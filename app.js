@@ -15,15 +15,18 @@ const categoryRouter = require('./controllers/category');
 const BrandRouter = require('./controllers/brand');
 const productRouter = require('./controllers/product');
 const subcategoryRouter = require('./controllers/subcategory');
-  // conexion base de datos
-  (async () => {
-    try {
-      await mongoose.connect(MONGO_URL);
-      console.log('conectado a la base de datos');
-    } catch (error) {
-      console.log(error);
-    }
-  })();
+const discountRouter = require('./controllers/discount');
+const cartRouter = require('./controllers/cart');
+
+// conexion base de datos
+(async () => {
+  try {
+    await mongoose.connect(MONGO_URL);
+    console.log('conectado a la base de datos');
+  } catch (error) {
+    console.log(error);
+  }
+})();
 
 // middlewares
 app.use(cors());
@@ -46,4 +49,7 @@ app.use('/api/category', usertExtractor, categoryRouter);
 app.use('/api/brand', usertExtractor, BrandRouter);
 app.use('/api/subcategory', usertExtractor, subcategoryRouter);
 app.use('/api/product', usertExtractor, productRouter);
+app.use('/api/discount', usertExtractor, discountRouter);
+app.use('/api/cart', usertExtractor, cartRouter);
+
 module.exports = app;
