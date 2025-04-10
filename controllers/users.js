@@ -22,7 +22,7 @@ usersRouter.get('/', async (req, res) => {
 usersRouter.post('/', async (req, res) => {
   // lo que obtengo del body
   const { name, lastname, gender, age, address, email, password } = req.body;
-  // console.log(name, lastname, gender, age, address, email, password);
+  console.log(name, lastname, gender, age, address, email, password);
 
   // validando los datos
   if (
