@@ -67,11 +67,42 @@ const productSchema = new mongoose.Schema(
       ref: 'Subcategory',
       required: true,
     },
+    discount: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Discount',
+    },
+    // hasDiscount: {
+    //   type: Boolean,
+    //   default: false,
+    // },
+    // discountPercentage: {
+    //   type: Number,
+    //   default: null,
+    // },
+    // discountedPrice: {
+    //   type: Number,
+    //   default: null,
+    // },
   },
   {
     timestamps: true, // añade createdAt y updatedAt automáticamente
   }
 );
+
+productSchema.methods.getDiscount = function () {
+  // Verifica si hay un descuento activo y vigente
+  if (
+    this.discount &&
+    this.discount.active &&
+    (!this.discount.validUntil || this.discount.validUntil >= new Date())
+  ) {
+    return {
+      value: this.discount.value,
+      type: this.discount.type,
+    };
+  }
+  return null;
+};
 
 productSchema.set('toJSON', {
   transform: (document, returnedObject) => {
