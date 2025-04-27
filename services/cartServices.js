@@ -32,9 +32,11 @@ const addToCart = async (userId, productId, quantity) => {
     });
 
     // 4. Calcular precio final
-    const finalPrice = discount
-      ? product.price * (1 - discount.percentage / 100)
-      : product.price;
+    // const finalPrice = discount
+    //   ? product.price * (1 - discount.percentage / 100)
+    //   : product.price;
+    // 4. Usar el precio original del producto (sin descuento)
+    const finalPrice = product.price;
 
     // 5. Actualizar o añadir item al carrito
     const itemIndex = cart.items.findIndex(
@@ -43,7 +45,7 @@ const addToCart = async (userId, productId, quantity) => {
 
     if (itemIndex > -1) {
       cart.items[itemIndex].quantity += quantity;
-      cart.items[itemIndex].price = finalPrice; // Actualizar precio por si el descuento cambió
+      cart.items[itemIndex].price = finalPrice;
     } else {
       cart.items.push({
         product: productId,
@@ -57,13 +59,18 @@ const addToCart = async (userId, productId, quantity) => {
       cart.discount.push(discount._id);
     }
 
-    // 7. Calcular totales
+    // 7.  Calcular subtotal sin descuentos
     cart.subtotal = cart.items.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0
     );
+    // 8. Calcular total CON descuentos (pero solo como referencia)
+    const discountAmount = cart.discount.reduce((sum, discount) => {
+      return sum + cart.subtotal * (discount.percentage / 100);
+    }, 0);
 
     // Aplicar descuentos globales si los hubiera (aquí puedes expandir la lógica)
+    //  cart.total = cart.subtotal - discountAmount;
     cart.total = cart.subtotal;
 
     cart.lastUpdated = new Date();
@@ -130,9 +137,64 @@ const removeFromCart = async (userId, productId) => {
     throw error;
   }
 };
+// editar la cantidad de producto
+// Editar cantidad de producto en el carrito
+const updateProductQuantity = async (userId, productId, newQuantity) => {
+  try {
+    // 1. Validar que la nueva cantidad sea válida
+    if (newQuantity <=0) {
+      throw new Error('La cantidad debe ser un número positivo');
+    }
+
+    // 2. Verificar producto y stock
+    const product = await Product.findById(productId);
+    if (!product) throw new Error('Producto no encontrado');
+    if (product.stock < newQuantity) {
+      throw new Error(`Stock insuficiente. Disponible: ${product.stock}`);
+    }
+
+    // 3. Buscar carrito existente
+    let cart = await Cart.findOne({ user: userId });
+    if (!cart) {
+      throw new Error('Carrito no encontrado');
+    }
+
+    // 4. Buscar item en el carrito
+    const itemIndex = cart.items.findIndex(
+      (item) => item.product.toString() === productId.toString()
+    );
+
+    if (itemIndex === -1) {
+      throw new Error('Producto no encontrado en el carrito');
+    }
+
+    // 5. Actualizar cantidad
+    cart.items[itemIndex].quantity = newQuantity;
+
+    // 6. Recalcular totales
+    cart.subtotal = cart.items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+    cart.total = cart.subtotal;
+    cart.lastUpdated = new Date();
+
+    await cart.save();
+
+    return {
+      success: true,
+      message: 'Cantidad actualizada correctamente',
+      cart: cart
+    };
+  } catch (error) {
+    console.error('Error al actualizar cantidad:', error);
+    throw error;
+  }
+};
 
 
 module.exports = {
-    addToCart,
-    removeFromCart
+  addToCart,
+  removeFromCart,
+  updateProductQuantity,
 };
