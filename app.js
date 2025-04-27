@@ -10,14 +10,17 @@ const loginRouter = require('./controllers/login');
 const logoutRouter = require('./controllers/logout');
 const perfilUserRouter = require('./controllers/perfilUser');
 const UploadRouter = require('./controllers/uploadProfileUser');
-const { usertExtractor } = require('./midlewares/auth');
+const { userExtractor } = require('./middlewares/auth');
 const categoryRouter = require('./controllers/category');
 const BrandRouter = require('./controllers/brand');
 const productRouter = require('./controllers/product');
 const subcategoryRouter = require('./controllers/subcategory');
 const discountRouter = require('./controllers/discount');
 const cartRouter = require('./controllers/cart');
-
+const orderRouter = require('./controllers/order');
+const aliquotsRouter = require('./controllers/aliquots');
+const activityLogsRouter = require('./controllers/activityLog');
+const auditMiddleware = require('./middlewares/auditMiddleware');
 // conexion base de datos
 (async () => {
   try {
@@ -44,12 +47,14 @@ app.use('/api/registration', usersRouter);
 app.use('/api/login', loginRouter);
 app.use('/api/logout', logoutRouter);
 app.use('/api/profile', perfilUserRouter);
-app.use('/api/upload', usertExtractor, UploadRouter);
-app.use('/api/category', usertExtractor, categoryRouter);
-app.use('/api/brand', usertExtractor, BrandRouter);
-app.use('/api/subcategory', usertExtractor, subcategoryRouter);
-app.use('/api/product', usertExtractor, productRouter);
-app.use('/api/discount', usertExtractor, discountRouter);
-app.use('/api/cart', usertExtractor, cartRouter);
-
+app.use('/api/upload', userExtractor,auditMiddleware('UserProfile'), UploadRouter);
+app.use('/api/category', userExtractor, auditMiddleware('Category'), categoryRouter);
+app.use('/api/brand', userExtractor, auditMiddleware('Brand'), BrandRouter);
+app.use('/api/subcategory', userExtractor,auditMiddleware('Subcategory'), subcategoryRouter);
+app.use('/api/product', userExtractor, auditMiddleware('Product'), productRouter);
+app.use('/api/discount', userExtractor, auditMiddleware('Discount'), discountRouter);
+app.use('/api/cart', userExtractor, auditMiddleware('Cart'), cartRouter);
+app.use('/api/order', userExtractor, auditMiddleware('Order'), orderRouter);
+app.use('/api/aliquots', userExtractor,auditMiddleware('Aliquot'), aliquotsRouter);
+app.use('/api/activity-logs', activityLogsRouter);
 module.exports = app;
