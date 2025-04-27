@@ -4,6 +4,45 @@ const cartRouter = require('express').Router();
 // const Discount = require('../models/discount');
 const cartServices = require('../services/cartServices');
 
+// Obtener el carrito del usuario actual
+cartRouter.get('/', async (req, res) => {
+  try {
+    // 1. Verificar usuario
+    const user = req.user;
+    if (!user || user.role !== 'user') {
+      return res.status(401).json({ message: 'No autorizado' });
+    }
+
+    // 2. Obtener carrito con toda la información necesaria
+    const cart = await Cart.findOne({ user: user._id })
+      .populate('items.product')
+      .populate('discount');
+
+    if (!cart) {
+      return res.status(200).json({
+        success: true,
+        cart: {
+          items: [],
+          subtotal: 0,
+          total: 0,
+          discount: [],
+          user: user._id
+        }
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      cart,
+    });
+  } catch (error) {
+    console.error('Error al obtener carrito:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener el carrito',
+    });
+  }
+});
 cartRouter.post('/', async (req, res) => {
   try {
     // 1. Verificar usuario
@@ -68,6 +107,57 @@ cartRouter.post('/', async (req, res) => {
     });
   }
 });
+// editar la cantidad de producto al carrito
+cartRouter.put('/:productId', async (req, res) => {
+  try {
+    // 1. Verificar usuario autenticado
+    const user = req.user;
+    if (!user || user.role !== 'user') {
+      return res.status(401).json({ message: 'No autorizado' });
+    }
+
+    // 2. Obtener parámetros
+    const { productId } = req.params;
+    const { quantity } = req.body;
+
+    // 3. Validar entrada
+    if (!quantity){
+      return res.status(400).json({ 
+        success: false,
+        message: 'La cantidad debe ser un número válido' 
+      });
+    }
+
+    const numericQuantity = parseInt(quantity);
+    if (numericQuantity <=0) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'La cantidad debe ser mayor a 0' 
+      });
+    }
+
+    // 4. Actualizar cantidad
+    const result = await cartServices.updateProductQuantity(
+      user._id, 
+      productId, 
+      numericQuantity
+    );
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error en PUT /cart/:productId:', error);
+    const status = error.message.includes('no encontrado') ? 404 : 
+                  error.message.includes('Stock insuficiente') ? 400 : 500;
+    res.status(status).json({
+      success: false,
+      message: error.message
+    });
+  }
+})
+
+
+
+
 // eliminando un elemento del carrito
 cartRouter.delete('/:productId', async (req, res) => {
   try {
