@@ -1,7 +1,7 @@
 const logoutRouter = require('express').Router();
 const User = require('../models/user');
 const jwt = require('jsonwebtoken');
-
+const systemLogger = require('../help/system/systemLogger');
 logoutRouter.get('/', async (req, res) => {
   const cookies = req.cookies;
 
@@ -20,11 +20,14 @@ logoutRouter.get('/', async (req, res) => {
 
     // Actualizar el estado online a false
     await User.findByIdAndUpdate(userId, { online: false });
+    // Registrar logout
+    await systemLogger.logLogout(userId, req); // o decodedToken.id
 
     // Borrar la cookie del navegador
     res.clearCookie('accesstoken', {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
+      sameSite: 'strict',
     });
 
     return res.sendStatus(204);
@@ -36,6 +39,7 @@ logoutRouter.get('/', async (req, res) => {
     });
     return res.status(400).json('Sesión inválida');
   }
+
 });
 
 module.exports = logoutRouter;
