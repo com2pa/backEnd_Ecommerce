@@ -21,8 +21,8 @@ usersRouter.get('/', async (req, res) => {
 // creando un nuevo usuario
 usersRouter.post('/', async (req, res) => {
   // lo que obtengo del body
-  const { name, lastname, gender, age, address, email, password } = req.body;
-  console.log(name, lastname, gender, age, address, email, password);
+  const { name, lastname, gender, age, address, email, password,cedula } = req.body;
+  console.log(name, lastname, gender, age, address, email, password,cedula);
 
   // validando los datos
   if (
@@ -32,7 +32,8 @@ usersRouter.post('/', async (req, res) => {
     !age ||
     !address ||
     !email ||
-    !password
+    !password ||
+    !cedula
   ) {
     return res
       .status(400)
@@ -69,6 +70,7 @@ usersRouter.post('/', async (req, res) => {
     age,
     address,
     email,
+    cedula,
     password: hashedPassword,
   });
   // guardando el usuario
