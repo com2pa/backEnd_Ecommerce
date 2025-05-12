@@ -71,10 +71,10 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Discount',
     },
-     aliquots: [{
+     aliquots: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Aliquot'
-    }],
+    },
     // hasDiscount: {
     //   type: Boolean,
     //   default: false,
