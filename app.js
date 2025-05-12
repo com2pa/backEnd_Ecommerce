@@ -21,15 +21,40 @@ const orderRouter = require('./controllers/order');
 const aliquotsRouter = require('./controllers/aliquots');
 const activityLogsRouter = require('./controllers/activityLog');
 const auditMiddleware = require('./middlewares/auditMiddleware');
-// conexion base de datos
-(async () => {
-  try {
-    await mongoose.connect(MONGO_URL);
-    console.log('conectado a la base de datos');
-  } catch (error) {
-    console.log(error);
+const roleManagementRouter = require('./controllers/roleManagement');
+const refresRouter = require('./controllers/refres');
+(
+  // conexion base de datos
+  async () => {
+    try {
+      await mongoose.connect(MONGO_URL, {
+      serverSelectionTimeoutMS: 70000, // 30 segundos
+      socketTimeoutMS: 60000, // 45 segundos
+      maxPoolSize: 100, // Número máximo de conexiones
+      retryWrites: true,
+      retryReads: true,
+    });
+      console.log('conectado a la base de datos');
+      // serverSelectionTimeoutMS: 30000, // 30 segundos
+      // socketTimeoutMS: 45000, // 45 segundos
+    } catch (error) {
+       console.error('Error de conexión a MongoDB:', error);
+    process.exit(1); // Salir si no hay conexión
+    }
   }
-})();
+)();
+// // Manejar eventos de conexión
+// mongoose.connection.on('connected', () => {
+//   console.log('Mongoose conectado a DB');
+// });
+
+mongoose.connection.on('error', (err) => {
+  console.error('Error de conexión Mongoose:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('Mongoose desconectado');
+});
 
 // middlewares
 app.use(cors());
@@ -46,15 +71,18 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/registration', usersRouter);
 app.use('/api/login', loginRouter);
 app.use('/api/logout', logoutRouter);
+app.use('/api/refres', userExtractor,refresRouter);
 app.use('/api/profile', perfilUserRouter);
-app.use('/api/upload', userExtractor,auditMiddleware('UserProfile'), UploadRouter);
-app.use('/api/category', userExtractor, auditMiddleware('Category'), categoryRouter);
+app.use('/api/upload', userExtractor,  auditMiddleware('UserProfile'),  UploadRouter);
+app.use(  '/api/category',  userExtractor,  auditMiddleware('Category'),  categoryRouter);
 app.use('/api/brand', userExtractor, auditMiddleware('Brand'), BrandRouter);
-app.use('/api/subcategory', userExtractor,auditMiddleware('Subcategory'), subcategoryRouter);
+app.use(  '/api/subcategory',  userExtractor,  auditMiddleware('Subcategory'),  subcategoryRouter);
 app.use('/api/product', userExtractor, auditMiddleware('Product'), productRouter);
-app.use('/api/discount', userExtractor, auditMiddleware('Discount'), discountRouter);
+app.use('/api/discount',  userExtractor,  auditMiddleware('Discount'),  discountRouter);
 app.use('/api/cart', userExtractor, auditMiddleware('Cart'), cartRouter);
 app.use('/api/order', userExtractor, auditMiddleware('Order'), orderRouter);
-app.use('/api/aliquots', userExtractor,auditMiddleware('Aliquot'), aliquotsRouter);
+app.use(  '/api/aliquots',  userExtractor,  auditMiddleware('Aliquot'),  aliquotsRouter);
 app.use('/api/activity-logs', activityLogsRouter);
+app.use(  '/api/roles',  userExtractor,  auditMiddleware('User'),  roleManagementRouter);
+
 module.exports = app;
