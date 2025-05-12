@@ -5,7 +5,7 @@ const Category = require('../models/category');
 
 categoryRouter.get('/', async (req, res) => {
   const categories = await Category.find({}).populate('user', 'name');
-  console.log('las categorias', categories);
+  // console.log('las categorias', categories);
   res.json(categories);
 });
 
@@ -25,6 +25,7 @@ categoryRouter.post('/', async (req, res) => {
       .status(400)
       .json({ message: 'Debes proporcionar nombre y código' });
   }
+
   // Verificar si el código ya existe
   const existingCategory = await Category.findOne({ code });
   if (existingCategory) {
@@ -37,9 +38,13 @@ categoryRouter.post('/', async (req, res) => {
   console.log('nueva categoria creada', newCategory);
   // Guardar categoría en la base de datos
   await newCategory.save();
-
+  // Populate el usuario antes de enviar la respuesta
+  const populatedCategory = await Category.findById(newCategory._id).populate(
+    'user',
+    'name'
+  );
   // Crear y enviar la respuesta con la categoría creada
-  res.status(201).json({ msg: 'Categoría creada', newCategory });
+  res.status(201).json(newCategory);
 });
 
 // editando la categoria
