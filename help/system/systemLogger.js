@@ -76,22 +76,41 @@ const systemLogger = {
     }
   },
   /**
+   * Función helper para reintentos
+   */
+    logWithRetry: async function(logFn, maxRetries = 3, delay = 2000) {
+    let attempt = 1;
+    while (attempt <= maxRetries) {
+      try {
+        return await logFn();
+      } catch (error) {
+        if (attempt === maxRetries) throw error;
+        console.warn(`Intento ${attempt} fallido. Reintentando en ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        attempt++;
+      }
+    }
+  },
+  /**
    * Registra eventos del sistema (inicio/parada)
    * @param {String} action - Tipo de evento (system_start/system_stop)
    * @param {Object} metadata - Metadatos adicionales
    */
-  logSystemEvent: async (action, metadata = {}) => {
+  logSystemEvent: async function(action, metadata = {}) {
     try {
-      await ActivityLog.create({
-        action,
-        ipAddress: 'system',
-        metadata: {
-          ...metadata,
-          timestamp: new Date(),
-        },
+      await this.logWithRetry(async () => {
+        await ActivityLog.create({
+          action,
+          ipAddress: 'system',
+          metadata: {
+            ...metadata,
+            timestamp: new Date(),
+          },
+        });
       });
     } catch (error) {
-      console.error(`Error registrando evento del sistema (${action}):`, error);
+      console.error(`Error crítico registrando evento del sistema (${action}):`, error);
+      // Fallback: Escribir en archivo local o enviar a servicio externo
     }
   },
   /**
@@ -135,6 +154,7 @@ const systemLogger = {
       console.error(`Error registrando acción CRUD (${action}):`, error);
     }
   },
+  
 };
 
 module.exports = systemLogger;
