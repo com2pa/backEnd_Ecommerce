@@ -15,7 +15,6 @@ const subcategorySchema = new mongoose.Schema({
     }
   ],
 });
-
 subcategorySchema.set('toJSON', {
   transform: (document, returnedObject) => {
     returnedObject.id = returnedObject._id.toString();
