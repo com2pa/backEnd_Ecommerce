@@ -6,11 +6,11 @@ const userSchema = new mongoose.Schema({
   lastname: String,
   age: Number,
   address: String,
+  cedula:String,
   gender: {
     type: String,
     enum: ['male', 'female', 'other'],
     required: true,
-    
   },
   password: {
     type: String,
@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'],    
+    enum: ['user', 'admin', 'editor', 'viewer', 'superadmin', 'auditor'],
     default: 'user',
   },
   createdAt: {
@@ -42,6 +42,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: 'default.png',
   },
+  shoppingHistory:[{//historia del compra
+    type:Number
+  }]
 });
 userSchema.set('toJSON', {
     transform: (document, returnedObject) => {
