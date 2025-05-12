@@ -30,8 +30,8 @@ subcategoryRouter.post('/', async (req, res) => {
     }
 
     // Verificar que la categoría exista
-    const categoryExists = await Category.findById(categoryId);
-    if (!categoryExists) {
+    const category = await Category.findById(categoryId);
+    if (!category) {
       return res.status(404).json({
         error: 'La categoría especificada no existe',
       });
@@ -54,15 +54,27 @@ subcategoryRouter.post('/', async (req, res) => {
 
     const savedSubcategory = await newSubcategory.save();
 
-    // Actualizar la categoría para incluir esta subcategoría
-    await Category.findByIdAndUpdate(categoryId, {
-      $push: { subcategory: savedSubcategory._id },
-    });
+    // Verificar si el ID de la subcategoría ya está en la categoría
+    if (
+      category.subcategory &&
+      category.subcategory.includes(savedSubcategory._id)
+    ) {
+      console.log(
+        'El ID de subcategoría ya existe en la categoría, no se actualizará'
+      );
+    } else {
+      // Actualizar la categoría solo si el ID no existe
+      await Category.findByIdAndUpdate(categoryId, {
+        $addToSet: { subcategory: savedSubcategory._id },
+      });
+    }
 
-    return res.status(201).json({
-      message: 'Subcategoría creada exitosamente',
-      subcategory: savedSubcategory,
-    });
+    // Obtener la subcategoría con la categoría populada
+    const populatedSubcategory = await Subcategory.findById(
+      savedSubcategory._id
+    ).populate('category', 'name _id');
+
+    return res.status(201).json(populatedSubcategory);
   } catch (error) {
     console.error('Error al crear subcategoría:', error);
     return res.status(500).json({
@@ -71,10 +83,9 @@ subcategoryRouter.post('/', async (req, res) => {
     });
   }
 });
-// editar la subcategoria
 
 // Editar subcategoría
-subcategoryRouter.put('/:id', async (req, res) => { 
+subcategoryRouter.patch('/:id', async (req, res) => { 
   try {
     const user = req.user;
     if (user.role !== 'admin') {
@@ -100,12 +111,11 @@ subcategoryRouter.put('/:id', async (req, res) => {
         error: 'La subcategoría especificada no existe',
       });
     }
-
     // Verificar si el nuevo código ya existe en otra subcategoría
     if (code !== subcategory.code) {
       const existingCode = await Subcategory.findOne({ 
         code, 
-        _id: { $ne: subcategoryId } 
+        id: { $ne: subcategoryId } 
       });
       
       if (existingCode) {
@@ -171,7 +181,6 @@ subcategoryRouter.put('/:id', async (req, res) => {
 });
 
 // eliminar la subcatefgoria por el id 
-
 subcategoryRouter.delete('/:id', async (req, res) => { 
   try {
     const user = req.user;
