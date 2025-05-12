@@ -45,6 +45,7 @@ productRouter.post('/', upload.single('image'), async (req, res) => {
     isActive,
     subcategoryId,
     brandId,
+    aliquotId
   } = req.body;
   brandId,
     console.log(
@@ -59,7 +60,8 @@ productRouter.post('/', upload.single('image'), async (req, res) => {
       sku,
       isActive,
       subcategoryId,
-      brandId
+      brandId,
+      aliquotId
     );
 
   // Validación de campos requeridos
@@ -74,11 +76,12 @@ productRouter.post('/', upload.single('image'), async (req, res) => {
     !sku ||
     !subcategoryId ||
     !brandId ||
-    !isActive
+    !isActive ||
+    !aliquotId
   ) {
     return res.status(400).json({
       error:
-        'Faltan campos requeridos: nombre, descripción, precio, stock, unidad, unidades por paquete, mínimo en stock, SKU, activo, categoría y marca',
+        'Faltan campos requeridos: nombre, descripción, precio, stock, unidad, unidades por paquete, mínimo en stock, SKU, activo, categoría y marca, alicuota',
     });
   }
 
@@ -153,6 +156,7 @@ productRouter.post('/', upload.single('image'), async (req, res) => {
       subcategory: subcategoryId,
       brand: brandId,
       image: imageName,
+      aliquots : aliquotId,
       user: req.user.id,
     });
     // guardando el producto
@@ -243,6 +247,7 @@ productRouter.patch('/:id', upload.single('image'), async (req, res) => {
       isActive,
       subcategoryId,
       brandId,
+      aliquotId
     } = req.body;
 
     // Validaciones básicas
@@ -257,6 +262,7 @@ productRouter.patch('/:id', upload.single('image'), async (req, res) => {
       !sku ||
       !subcategoryId ||
       !brandId ||
+      !aliquotId ||
       isActive === undefined
     ) {
       return res.status(400).json({
@@ -293,6 +299,7 @@ productRouter.patch('/:id', upload.single('image'), async (req, res) => {
       isActive: isActive !== 'false',
       subcategory: subcategoryId,
       brand: brandId,
+      aliquots: aliquotId,
     };
 
     // Manejo de imagen si se subió una nueva
