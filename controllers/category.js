@@ -41,7 +41,7 @@ categoryRouter.post('/', async (req, res) => {
   // Populate el usuario antes de enviar la respuesta
   const populatedCategory = await Category.findById(newCategory._id).populate(
     'user',
-    'name'
+    'name' 
   );
   // Crear y enviar la respuesta con la categoría creada
   res.status(201).json(newCategory);
