@@ -24,8 +24,24 @@ const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
+productRouter.get('/', async (req, res) => {
+  try {
+    const productos = await Product.find({})
+      // .populate('brand', 'name') // Solo el nombre de la marca
+      // .populate('subcategory', 'name') // Solo el nombre de la subcategoría
+      // .populate('aliquots', 'percentage') // Solo el nombre del aliquot
+      // .exec();
+
+    return res.status(200).json(productos);
+  } catch (error) {
+    console.error('Error al obtener productos:', error);
+    return res.status(500).json({ error: 'Error al obtener los productos' });
+  }
+})
+
 // creando el producto
 productRouter.post('/', upload.single('image'), async (req, res) => {
+  
   const user = req.user;
   if (user.role !== 'admin') {
     return res
