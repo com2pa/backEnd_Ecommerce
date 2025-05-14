@@ -11,51 +11,51 @@ aliquotsRouter.get('/', async (req, res) => {
     if (user.role != 'admin') {
       return res.status(401).json({ success: false, error: 'No autenticado' });
     }
+    const alicuota = await Aliquot.find({})
+    // // 2. Obtener parámetros de consulta
+    // const { 
+    //   page = 1, 
+    //   limit = 10, 
+    //   sort = 'code',
+    //   order = 'asc',
+    //   search 
+    // } = req.query;
 
-    // 2. Obtener parámetros de consulta
-    const { 
-      page = 1, 
-      limit = 10, 
-      sort = 'code',
-      order = 'asc',
-      search 
-    } = req.query;
+    // // 3. Construir consulta
+    // const query = {};
+    // if (search) {
+    //   query.$or = [
+    //     { code: { $regex: search, $options: 'i' } },
+    //     { name: { $regex: search, $options: 'i' } }
+    //   ];
+    // }
 
-    // 3. Construir consulta
-    const query = {};
-    if (search) {
-      query.$or = [
-        { code: { $regex: search, $options: 'i' } },
-        { name: { $regex: search, $options: 'i' } }
-      ];
-    }
+    // // 4. Opciones de paginación
+    // const options = {
+    //   page: parseInt(page),
+    //   limit: parseInt(limit),
+    //   sort: { [sort]: order === 'asc' ? 1 : -1 },
+    //   lean: true
+    // };
 
-    // 4. Opciones de paginación
-    const options = {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      sort: { [sort]: order === 'asc' ? 1 : -1 },
-      lean: true
-    };
+    // // 5. Ejecutar consulta paginada
+    // const result = await Aliquot.paginate(query, options);
 
-    // 5. Ejecutar consulta paginada
-    const result = await Aliquot.paginate(query, options);
-
-    // 6. Formatear respuesta
-    const response = {
-      success: true,
-      data: {
-        aliquots: result.docs,
-        pagination: {
-          total: result.totalDocs,
-          pages: result.totalPages,
-          page: result.page,
-          limit: result.limit,
-          hasNext: result.hasNextPage,
-          hasPrev: result.hasPrevPage
-        }
-      }
-    };
+    // // 6. Formatear respuesta
+    // const response = {
+    //   success: true,
+    //   data: {
+    //     aliquots: result.docs,
+    //     pagination: {
+    //       total: result.totalDocs,
+    //       pages: result.totalPages,
+    //       page: result.page,
+    //       limit: result.limit,
+    //       hasNext: result.hasNextPage,
+    //       hasPrev: result.hasPrevPage
+    //     }
+    //   }
+    // };
 
     // // 7. Registrar acción de lectura (si es necesario)
     // await systemLogger.logCrudAction(
@@ -70,7 +70,7 @@ aliquotsRouter.get('/', async (req, res) => {
     //   }
     // );
 
-    return res.status(200).json(response);
+    return res.status(200).json(alicuota);
 
   } catch (error) {
     console.error('Error al obtener alícuotas:', error);
@@ -104,11 +104,7 @@ aliquotsRouter.post('/', async (req, res) => {
       { code, name, percentage },
       req.user._id
     );
-    return res.status(200).json({
-      success: true,
-      message: 'Alícuota creada exitosamente',
-      data: newAliquot,
-    });
+    return res.status(200).json( newAliquot);
   } catch (error) {
     console.error('Error al crear alícuota:', error);
     const statusCode =
