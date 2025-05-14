@@ -5,7 +5,7 @@ const Brand = require('../models/brand');
 BrandRouter.get('/', async (req, res) => {
   // mostrando todas las marcas
   const allBrand = await Brand.find({});
-  console.log('todas las marcas', allBrand);
+  // console.log('todas las marcas', allBrand);
   // Enviar la respuesta con la marca/empresa mostando todas las  marcas registradas
   res.json(allBrand);
 });
@@ -35,7 +35,7 @@ BrandRouter.post('/', async (req, res) => {
   const newBrand = new Brand({ name, rif });
   await newBrand.save();
   // Enviar la respuesta con la marca/empresa creada
-  res.status(201).json({ msg: 'Marca/empresa creada', newBrand });
+  res.status(201).json(newBrand );
 });
 
 // editar marca/empresa
@@ -64,7 +64,7 @@ BrandRouter.patch('/:id', async (req, res) => {
     return res.status(404).json({ message: 'Marca/empresa no encontrada' });
   }
   // Enviar la respuesta con la marca/empresa editada
-  res.json({ msg: 'Marca/empresa editada', existingBrand });
+  res.json( existingBrand );
 });
 
 // eliminar marca/empresa
