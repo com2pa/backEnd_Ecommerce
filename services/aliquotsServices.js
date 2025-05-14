@@ -71,11 +71,17 @@ const updateAliquot = async (id, updateData, userId) => {
   }
 
   // Aplicar actualización
-  return await Aliquots.findByIdAndUpdate(id, updateData, {
+  const updatedAliquot = await Aliquots.findByIdAndUpdate(id, updateData, {
     new: true,
     runValidators: true,
-  });
-}
+  }).lean(); // Añade .lean() para obtener un objeto plano
+
+  if (!updatedAliquot) {
+    throw new Error('Error al actualizar la alícuota');
+  }
+
+  return updatedAliquot;
+};
 
 
   (module.exports = {
