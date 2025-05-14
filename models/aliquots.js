@@ -12,15 +12,15 @@ const aliquotSchema = new mongoose.Schema({
   },
   name: {
     type: String,
-    required: [true, 'El nombre de la alícuota es requerido'],
-    enum: [
-      'General',
-      'Reducida',
-      'Adicional',
-      'Exento',
-      'Percibido',
-      'Impuesto a Grandes Transacciones Financieras',
-    ],
+    // required: [true, 'El nombre de la alícuota es requerido'],
+    // enum: [
+    //   'General',
+    //   'Reducida',
+    //   'Adicional',
+    //   'Exento',
+    //   'Percibido',
+    //   'Impuesto a Grandes Transacciones Financieras',
+    // ],
   },
   percentage: {
     type: Number,
