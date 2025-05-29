@@ -23,6 +23,7 @@ const activityLogsRouter = require('./controllers/activityLog');
 const auditMiddleware = require('./middlewares/auditMiddleware');
 const roleManagementRouter = require('./controllers/roleManagement');
 const refresRouter = require('./controllers/refres');
+const bcvRouter = require('./controllers/bcv');
 (
   // conexion base de datos
   async () => {
@@ -84,5 +85,6 @@ app.use('/api/order', userExtractor, auditMiddleware('Order'), orderRouter);
 app.use(  '/api/aliquots',  userExtractor,  auditMiddleware('Aliquot'),  aliquotsRouter);
 app.use('/api/activity-logs', activityLogsRouter);
 app.use(  '/api/roles',  userExtractor,  auditMiddleware('User'),  roleManagementRouter);
+app.use('/api/tasas-bcv', bcvRouter); 
 
 module.exports = app;
