@@ -111,7 +111,7 @@ categoryRouter.patch('/:id', async (req, res) => {
     }
 
     // Crear y enviar la respuesta con la categoría editada
-    res.status(200).json({ msg: 'Categoría editada', category });
+    res.status(200).json( category);
 });
 
 
