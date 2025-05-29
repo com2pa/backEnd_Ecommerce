@@ -13,7 +13,8 @@ const categorySchema = new mongoose.Schema({
   subcategory: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref:'subcategory'
+      ref:'Subcategory',
+      default: [],
     }
   ],  
   user: {
