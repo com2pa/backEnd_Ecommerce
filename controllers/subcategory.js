@@ -167,10 +167,7 @@ subcategoryRouter.patch('/:id', async (req, res) => {
       ]);
     }
 
-    return res.status(200).json({
-      message: 'Subcategoría actualizada exitosamente',
-      subcategory: updatedSubcategory,
-    });
+    return res.status(200).json(updatedSubcategory);
   } catch (error) {
     console.error('Error al actualizar subcategoría:', error);
     return res.status(500).json({
