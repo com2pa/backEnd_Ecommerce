@@ -1,5 +1,6 @@
 const categoryRouter = require('express').Router();
 const Category = require('../models/category');
+const Subcategory = require('../models/subcategory');
 
 // mostrando todas las categorias
 
@@ -7,6 +8,37 @@ categoryRouter.get('/', async (req, res) => {
   const categories = await Category.find({}).populate('user', 'name');
   // console.log('las categorias', categories);
   res.json(categories);
+});
+// mostrar la subcatetegoria por id de la categoria
+categoryRouter.get('/:id', async (req, res) => {
+  try {
+    const category = await Category.findById(req.params.id)
+      .populate('user', 'name')
+      .populate({
+        path: 'subcategory',
+        select: 'name code', // Selecciona los campos que quieres mostrar
+        options: { sort: { name: 1 } } // Ordena por nombre ascendente
+      });
+
+    if (!category) {
+      return res.status(404).json({ message: 'Categoría no encontrada' });
+    }
+
+    // Enviar la respuesta con la categoría y sus subcategorías ya pobladas
+    res.json({
+      id: category.id,
+      name: category.name,
+      code: category.code,
+      user: category.user,
+      subcategories: category.subcategory || [] // Asegura que siempre haya un array
+    });
+  } catch (error) {
+    console.error('Error al obtener categoría:', error);
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      details: error.message 
+    });
+  }
 });
 
 // creando categoria de los productos
