@@ -67,5 +67,5 @@ aliquotSchema.set('toJSON', {
     delete returnedObject.__v;
   },
 });
-const Aliquot = mongoose.model('Aliquo', aliquotSchema);
+const Aliquot = mongoose.model('Aliquot', aliquotSchema);
 module.exports = Aliquot;
