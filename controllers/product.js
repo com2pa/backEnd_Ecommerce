@@ -6,24 +6,40 @@ const User = require('../models/user');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const { createProduct } = require('../services/productServices');
 
-// Configuración de multer (igual que tenías)
+// Configuración de multer 
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const allowedMimeTypes = ['image/jpeg', 'image/png'];
-    if (allowedMimeTypes.includes(file.mimetype)) {
-      cb(null, 'uploads/products/', true);
-    }
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, '..', 'uploads', 'products');
+    // Crear directorio si no existe
+    fs.mkdirSync(uploadPath, { recursive: true });
+    cb(null, uploadPath);
   },
-  filename: function (req, file, cb) {
-    cb(null, 'products ' + Date.now() + ' - ' + file.originalname);
-  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'product-' + uniqueSuffix + ext);
+  }
 });
+
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = ['image/jpeg', 'image/png'];
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Tipo de archivo no soportado. Solo JPG/PNG permitidos'), false);
+  }
+};
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  }
 });
+// mostrando todos los productos
 productRouter.get('/', async (req, res) => {
   try {
     const productos = await Product.find({})
@@ -39,195 +55,113 @@ productRouter.get('/', async (req, res) => {
   }
 })
 
-// creando el producto
-productRouter.post('/', upload.single('image'), async (req, res) => {
+// mostrando la imagen de un producto
+productRouter.get('/image/:imageName', (req, res) => {
+  const imageName = req.params.imageName;
+  const imagePath = path.join(__dirname, '..', 'uploads', 'products', imageName);
   
-  const user = req.user;
-  if (user.role !== 'admin') {
-    return res
-      .status(401)
-      .json({ message: 'No tienes permisos para realizar esta acción' });
-  }
+  fs.access(imagePath, fs.constants.F_OK, (err) => {
+    if (err) {
+      return res.status(404).json({ error: 'Imagen no encontrada' });
+    }
+    res.sendFile(imagePath);
+  });
+});
 
-  const {
-    name,
-    description,
-    price,
-    stock,
-    unit,
-    unitsPerPackage,
-    minStock,
-    sku,
-    isActive,
-    subcategoryId,
-    brandId,
-    aliquotId
-  } = req.body;
-  brandId,
-    console.log(
-      'producto',
-      name,
-      description,
-      price,
-      stock,
-      unit,
-      unitsPerPackage,
-      minStock,
-      sku,
-      isActive,
-      subcategoryId,
-      brandId,
-      aliquotId
-    );
-
-  // Validación de campos requeridos
-  if (
-    !name ||
-    !description ||
-    !price ||
-    !stock ||
-    !unit ||
-    !unitsPerPackage ||
-    !minStock ||
-    !sku ||
-    !subcategoryId ||
-    !brandId ||
-    !isActive ||
-    !aliquotId
-  ) {
-    return res.status(400).json({
-      error:
-        'Faltan campos requeridos: nombre, descripción, precio, stock, unidad, unidades por paquete, mínimo en stock, SKU, activo, categoría y marca, alicuota',
-    });
-  }
-
-  // Verificar si la categoría existe
+// creando el producto
+productRouter.post('/', upload.single('prodImage'), async (req, res) => {
   try {
-    const subcategoryExists = await Subcategory.findById(subcategoryId);
-    if (!subcategoryExists) {
+    const user = req.user;
+    
+    // Validar permisos
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        message: 'No tienes permisos para realizar esta acción'
+      });
+    }
+    // Validar que se haya subido una imagen
+        if (!req.file) {
+      return res.status(400).json({
+        error: 'Debe subir una imagen para el producto'
+      });
+    }
+
+    // Validar campos requeridos
+    const requiredFields = [
+    'description',
+    'price',
+    'stock',
+    'unit',
+    'unitsPerPackage',
+    'minStock',
+    'sku',
+    'isActive',
+    'subcategoryId',
+    'brandId',
+    'aliquotId'
+    ];
+    
+    const missingFields = requiredFields.filter(field => !req.body[field]);
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        error: `Faltan campos requeridos: ${missingFields.join(', ')}`
+      });
+    }
+
+    // Verificar referencias
+    const [brandExists, subcategoryExists] = await Promise.all([
+      Brand.findById(req.body.brandId),
+      Subcategory.findById(req.body.subcategoryId)
+    ]);
+
+    if (!brandExists || !subcategoryExists) {
       return res.status(404).json({
-        error: 'La subcategoría especificada no existe',
-      });
-    }
-  } catch (error) {
-    return res.status(400).json({
-      error: 'ID de categoría inválido',
-    });
-  }
-
-  // Verificar si la marca existe
-  try {
-    const brandExists = await Brand.findById(brandId);
-    if (!brandExists) {
-      return res.status(404).json({
-        error: 'La marca especificada no existe',
-      });
-    }
-  } catch (error) {
-    return res.status(400).json({
-      error: 'ID de marca inválido',
-    });
-  }
-
-  // Verificar si se subió una imagen
-  if (!req.file) {
-    return res
-      .status(400)
-      .json({ error: 'Debes subir una imagen del producto' });
-  }
-
-  // Validar extensión de la imagen
-  let image = req.file.originalname;
-  const imageSplit = image.split('.');
-  const ext = imageSplit[imageSplit.length - 1].toLowerCase();
-
-  if (ext !== 'png' && ext !== 'jpg' && ext !== 'jpeg') {
-    // Borrar archivo subido
-    const filePath = req.file.path;
-    fs.unlinkSync(filePath);
-    return res
-      .status(400)
-      .json({ error: 'Formato de imagen no válido (solo JPG/PNG)' });
-  }
-
-  // Generar nombre único para la imagen del producto
-  const imageName = `product-${Date.now()}.${ext}`;
-  const imagePath = path.join(__dirname, '..', 'uploads/products', imageName);
-
-  // Mover el archivo a su ubicación final
-  fs.renameSync(req.file.path, imagePath);
-
-  try {
-    // Crear y guardar el nuevo producto
-    const newProduct = new Product({
-      name,
-      description,
-      price: Number(price),
-      stock: Number(stock) || 0,
-      unit,
-      unitsPerPackage: Number(unitsPerPackage) || 1,
-      minStock: Number(minStock) || 0,
-      sku,
-      isActive: isActive !== 'false', // Convierte string a boolean
-      subcategory: subcategoryId,
-      brand: brandId,
-      image: imageName,
-      aliquots : aliquotId,
-      user: req.user.id,
-    });
-    // guardando el producto
-    const savedProduct = await newProduct.save();
-    console.log('guardando el producto', savedProduct);
-    if (!savedProduct) {
-      return res.status(500).json({
-        error: 'Error al guardar el producto',
-      });
-    }
-    // guardar el id producto en el modelo seleccionado de brand
-    const IdproductoBrand = await Brand.findByIdAndUpdate(brandId, {
-      $push: { products: savedProduct._id },
-    });
-    console.log('guardando el id del producto  a brand', IdproductoBrand);
-    // verificar si el producto existe en el modelo de brand
-    if (!IdproductoBrand) {
-      return res.status(404).json({
-        error: 'El producto no se pudo agregar a la marca',
+        error: 'Marca o subcategoría no encontrada'
       });
     }
 
-    // guardar el id producto en el modelo seleccionado de subcategory
-    const Idproductosubcategory = await Subcategory.findByIdAndUpdate(subcategoryId, {
-      $push: { products: savedProduct._id },
-    });
-    console.log('guardando el id del producto a category', Idproductosubcategory);
-    // verificar si el producto existe en el modelo de category
-    if (!Idproductosubcategory) {
-      return res.status(404).json({
-        error: 'El producto no se pudo agregar a la categoría',
-      });
-    }
+    // Crear el producto usando el servicio
+    const productData = {
+      name: req.body.name,
+      description: req.body.description,
+      price: parseFloat(req.body.price),
+      stock: parseInt(req.body.stock),
+      unit: req.body.unit,
+      unitsPerPackage: parseInt(req.body.unitsPerPackage),
+      minStock: parseInt(req.body.minStock),
+      sku: req.body.sku.toUpperCase(),
+      isActive: req.body.isActive !== 'false',
+      subcategory: req.body.subcategoryId,
+      brand: req.body.brandId,
+      aliquots: req.body.aliquotId
+    };
+
+    const newProduct = await createProduct(productData, req.file, user._id);
 
     return res.status(201).json({
       message: 'Producto creado exitosamente',
-      product: savedProduct,
+      product: newProduct
     });
+
   } catch (error) {
-    // Si hay un error, borrar la imagen subida
-    const filePath = path.join(__dirname, '..', 'uploads/products', imageName);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    console.error('Error al crear producto:', error);
+    
+    // Manejar errores específicos
+    if (error.code === 11000) {
+      return res.status(400).json({
+        error: 'El SKU ya está en uso por otro producto'
+      });
     }
 
-    // Manejar error de SKU duplicado
-    if (error.code === 11000 && error.keyPattern.sku) {
+    if (error.message.includes('image')) {
       return res.status(400).json({
-        error: 'El SKU ya está en uso por otro producto',
+        error: error.message
       });
     }
 
     return res.status(500).json({
-      error: 'Error al guardar el producto',
-      details: error.message,
+      error: 'Error al crear el producto',
+      details: error.message
     });
   }
 });

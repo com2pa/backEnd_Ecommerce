@@ -37,9 +37,9 @@ const productSchema = new mongoose.Schema(
       ref: 'Brand',
       required: true,
     },
-    image: {
+    prodImage: {
       type: String,
-      default: 'default.png',
+     
     },
     user: {
       // Cambiado a minúscula para seguir convenciones
@@ -75,18 +75,6 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Aliquot'
     },
-    // hasDiscount: {
-    //   type: Boolean,
-    //   default: false,
-    // },
-    // discountPercentage: {
-    //   type: Number,
-    //   default: null,
-    // },
-    // discountedPrice: {
-    //   type: Number,
-    //   default: null,
-    // },
   },
   {
     timestamps: true, // añade createdAt y updatedAt automáticamente

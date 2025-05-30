@@ -24,6 +24,7 @@ const auditMiddleware = require('./middlewares/auditMiddleware');
 const roleManagementRouter = require('./controllers/roleManagement');
 const refresRouter = require('./controllers/refres');
 const bcvRouter = require('./controllers/bcv');
+const path = require('path');
 (
   // conexion base de datos
   async () => {
@@ -86,5 +87,7 @@ app.use(  '/api/aliquots',  userExtractor,  auditMiddleware('Aliquot'),  aliquot
 app.use('/api/activity-logs', activityLogsRouter);
 app.use(  '/api/roles',  userExtractor,  auditMiddleware('User'),  roleManagementRouter);
 app.use('/api/tasas-bcv', bcvRouter); 
+// Servir archivos estáticos desde la carpeta uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 module.exports = app;
