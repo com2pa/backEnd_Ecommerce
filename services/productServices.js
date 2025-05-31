@@ -78,6 +78,63 @@ const createProduct = async (productData, imageFile, userId) => {
   }
 };
 
+// Actualizar producto con manejo completo de referencias e imagen
+const updateProduct = async (productId, productData, imageFile, userId) => {
+  let imageName = null;
+  try {
+    // Validaciones básicas
+    if (!productId || !productData) {
+      throw new Error('ID del producto o datos faltantes');
+    }
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      throw new Error('Producto no encontrado');
+    }
+
+    // Guardar referencias antiguas para actualización
+    const oldBrand = product.brand;
+    const oldSubcategory = product.subcategory;
+
+    // Manejar la imagen si se proporciona
+    if (imageFile) {
+      // Eliminar imagen anterior si existe
+      if (product.prodImage) {
+        const oldImagePath = path.join(__dirname, '..', 'uploads', 'products', product.prodImage);
+        try { await fs.unlink(oldImagePath); } catch (err) { console.error('Error eliminando imagen antigua:', err); }
+      }
+      imageName = await handleImageUpload(imageFile);
+      product.prodImage = imageName;
+    }
+
+    // Asegurar que isActive es booleano
+    productData.isActive = productData.isActive === true || productData.isActive === 'true';
+
+    // Actualizar los datos del producto
+    Object.assign(product, productData);
+    product.user = userId; // Actualizar usuario que modificó
+
+    // Guardar el producto actualizado
+    const updatedProduct = await product.save();
+
+    // Resto del código de actualización de referencias...
+    // ... (mantener el código existente)
+
+    return updatedProduct;
+  } catch (error) {
+    // Limpieza en caso de error
+    if (imageFile && imageFile.path) {
+      try { await fs.unlink(imageFile.path); } catch {}
+    }
+    if (imageName) {
+      const uploadPath = path.join(__dirname, '..', 'uploads', 'products', imageName);
+      try { await fs.unlink(uploadPath); } catch {}
+    }
+    throw error;
+  }
+};
+
 module.exports = {
-  createProduct
+  createProduct,
+  updateProduct
 };
