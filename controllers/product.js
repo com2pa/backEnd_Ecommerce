@@ -54,6 +54,25 @@ productRouter.get('/', async (req, res) => {
   }
 })
 
+// mostrar un producto por id
+productRouter.get('/:id', async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const product = await Product.findById(productId)
+      .populate('brand', 'name')
+      .populate('subcategory', 'name')
+      .populate('aliquots', 'percentage')
+      .exec();
+    if (!product) {
+      return res.status(404).json({ message: 'Producto no encontrado' });
+    }
+    return res.status(200).json(product);
+  } catch (error) {
+    console.error('Error al obtener producto:', error);
+    return res.status(500).json({ error: 'Error al obtener el producto' });
+  }
+});
+
 // mostrando la imagen de un producto
 productRouter.get('/image/:imageName', (req, res) => {
   const imageName = req.params.imageName;
