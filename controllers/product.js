@@ -7,7 +7,7 @@ const User = require('../models/user');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
-const { createProduct, updateProduct } = require('../services/productServices');
+const { createProduct, updateProduct, deleteProduct } = require('../services/productServices');
 
 // Configuración de multer 
 const storage = multer.diskStorage({
@@ -166,7 +166,6 @@ productRouter.post('/', upload.single('prodImage'), async (req, res) => {
 
 // editando el producto
 
-// Actualizar endpoint PATCH para usar el servicio
 productRouter.patch('/:id', upload.single('image'), async (req, res) => {
   try {
     const user = req.user;
@@ -175,10 +174,12 @@ productRouter.patch('/:id', upload.single('image'), async (req, res) => {
         message: 'No tienes permisos para realizar esta acción',
       });
     }
-
+    // Validar que se haya proporcionado un ID de producto
     const productId = req.params.id;
+    // console.log('ID del producto:', productId);
     
-    // Validar campos requeridos
+   
+    // // Validar campos requeridos
     const requiredFields = [
       'name', 'description', 'price', 'stock', 'unit', 
       'unitsPerPackage', 'minStock', 'sku', 'isActive',
@@ -190,12 +191,9 @@ productRouter.patch('/:id', upload.single('image'), async (req, res) => {
       return res.status(400).json({
         error: `Faltan campos requeridos: ${missingFields.join(', ')}`,
       });
-    }
+    } 
 
-    // Convertir isActive a booleano correctamente
-    const isActive = req.body.isActive === 'true' || req.body.isActive === true;
-
-    // Preparar datos para el servicio
+    // // Preparar datos para el servicio
     const productData = {
       name: req.body.name,
       description: req.body.description,
@@ -205,13 +203,14 @@ productRouter.patch('/:id', upload.single('image'), async (req, res) => {
       unitsPerPackage: parseInt(req.body.unitsPerPackage),
       minStock: parseInt(req.body.minStock),
       sku: req.body.sku.toUpperCase(),
-      isActive: isActive, // Usar el valor convertido correctamente
+      isActive:req.body.isActive, 
       subcategory: req.body.subcategoryId,
       brand: req.body.brandId,
       aliquots: req.body.aliquotId
     };
+    // console.log('Datos del producto a actualizar:', productData);
 
-    // Usar el servicio de actualización
+    // // Usar el servicio de actualización
     const updatedProduct = await updateProduct(
       productId, 
       productData, 
@@ -219,10 +218,7 @@ productRouter.patch('/:id', upload.single('image'), async (req, res) => {
       user._id
     );
 
-    return res.status(200).json({
-      message: 'Producto actualizado exitosamente',
-      product: updatedProduct,
-    });
+    return res.status(200).json( updatedProduct);
   } catch (error) {
     console.error('Error al actualizar producto:', error);
     
@@ -251,31 +247,34 @@ productRouter.delete('/:id', async (req, res) => {
       .json({ message: 'No tienes permisos para realizar esta acción' });
   }
   const productId = req.params.id;
-  // busco el id del producto
-  const product = await Product.findById(productId);
-  // verifico si el procto existe
-  if (!product) {
-    return res.status(404).json({ message: 'Producto no encontrado' });
-  }
-  // elimino el producto
-  const eliminado = await Product.findByIdAndDelete(productId);
-  // muestro el producto eliminado por consola
-  console.log('Producto eliminado:', eliminado);
 
-  // eliminando el producto del modelo de brand
-  const IdproductoBrand = await Brand.findByIdAndUpdate(product.brand, {
-    $pull: { products: productId },
-  });
-  console.log('Producto eliminado de brand:', IdproductoBrand);
+  const deletedProduct = await deleteProduct(productId);
 
-  // elimino el producto del modelo de subcategory
-  const Idproductocategory = await Subcategory.findByIdAndUpdate(
-    product.subcategory,
-    { $pull: { products: productId } }
-  );
-  console.log('Producto eliminado de category:', Idproductocategory);
+  // // busco el id del producto
+  // const product = await Product.findById(productId);
+  // // verifico si el procto existe
+  // if (!product) {
+  //   return res.status(404).json({ message: 'Producto no encontrado' });
+  // }
+  // // elimino el producto
+  // const eliminado = await Product.findByIdAndDelete(productId);
+  // // muestro el producto eliminado por consola
+  // console.log('Producto eliminado:', eliminado);
+
+  // // eliminando el producto del modelo de brand
+  // const IdproductoBrand = await Brand.findByIdAndUpdate(product.brand, {
+  //   $pull: { products: productId },
+  // });
+  // console.log('Producto eliminado de brand:', IdproductoBrand);
+
+  // // elimino el producto del modelo de subcategory
+  // const Idproductocategory = await Subcategory.findByIdAndUpdate(
+  //   product.subcategory,
+  //   { $pull: { products: productId } }
+  // );
+  // console.log('Producto eliminado de category:', Idproductocategory);
   // devuelvo el producto eliminado al cliente con status 200
-  return res.json({ message: 'Producto eliminado exitosamente', eliminado });
+  return res.json(deletedProduct);
 });
 
 module.exports = productRouter;
