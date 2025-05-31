@@ -86,7 +86,7 @@ const updateProduct = async (productId, productData, imageFile, userId) => {
     if (!productId || !productData) {
       throw new Error('ID del producto o datos faltantes');
     }
-
+    // Buscar el producto
     const product = await Product.findById(productId);
     if (!product) {
       throw new Error('Producto no encontrado');
@@ -107,8 +107,6 @@ const updateProduct = async (productId, productData, imageFile, userId) => {
       product.prodImage = imageName;
     }
 
-    // Asegurar que isActive es booleano
-    productData.isActive = productData.isActive === true || productData.isActive === 'true';
 
     // Actualizar los datos del producto
     Object.assign(product, productData);
@@ -117,8 +115,23 @@ const updateProduct = async (productId, productData, imageFile, userId) => {
     // Guardar el producto actualizado
     const updatedProduct = await product.save();
 
-    // Resto del código de actualización de referencias...
-    // ... (mantener el código existente)
+    // Actualizar referencias en Brand y Subcategory
+    if (oldBrand.toString() !== product.brand.toString()) {
+      await Brand.findByIdAndUpdate(oldBrand, {
+        $pull: { products: productId }
+      });
+      await Brand.findByIdAndUpdate(product.brand, {
+        $addToSet: { products: productId }
+      }); 
+    }
+    if (oldSubcategory.toString() !== product.subcategory.toString()) {
+      await Subcategory.findByIdAndUpdate(oldSubcategory, {
+        $pull: { products: productId }
+      });
+      await Subcategory.findByIdAndUpdate(product.subcategory, {
+        $addToSet: { products: productId }
+      });
+    }
 
     return updatedProduct;
   } catch (error) {
@@ -134,7 +147,43 @@ const updateProduct = async (productId, productData, imageFile, userId) => {
   }
 };
 
+// eliminar un producto por el id
+const deleteProduct = async (productId) => {
+  try {
+    // Buscar el producto
+    const product = await Product.findById(productId);
+    if (!product) {
+      throw new Error('Producto no encontrado');
+    }
+    // Eliminar imagen del sistema de archivos
+    if (product.prodImage) {
+      const imagePath = path.join(__dirname, '..', 'uploads', 'products', product.prodImage);
+      try { await fs.unlink(imagePath); } catch (err) { console.error('Error eliminando imagen:', err); }
+    }
+    // Eliminar el producto
+    const deletedProduct = await Product.findByIdAndDelete(productId);
+    if (!deletedProduct) {
+      throw new Error('Error al eliminar el producto');
+    }
+    // Eliminar referencias en Brand y Subcategory
+    await Promise.all([
+      Brand.findByIdAndUpdate(product.brand, {
+        $pull: { products: productId }
+      }),
+      Subcategory.findByIdAndUpdate(product.subcategory, {
+        $pull: { products: productId }
+      })
+    ]);
+    return deletedProduct;
+  }
+  catch (error) {
+    console.error('Error al eliminar producto:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   createProduct,
-  updateProduct
+  updateProduct,
+  deleteProduct
 };
