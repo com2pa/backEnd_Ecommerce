@@ -8,6 +8,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const { createProduct, updateProduct, deleteProduct } = require('../services/productServices');
+const { userExtractor } = require('../middlewares/auth');
 
 // Configuración de multer 
 const storage = multer.diskStorage({
@@ -66,8 +67,29 @@ productRouter.get('/image/:imageName', (req, res) => {
   });
 });
 
+// mostrar los productos asociados al id de la subcategoría
+productRouter.get('/subcategory/:id', async (req, res) => {
+  try {
+    const subcategoryId = req.params.id;
+    const products = await Product.find({ subcategory: subcategoryId })
+      .populate('brand', 'name')
+      .populate('subcategory', 'name')
+      .populate('aliquots', 'percentage')
+      .exec();
+
+    if (products.length === 0) {
+      return res.status(404).json({ message: 'No se encontraron productos para esta subcategoría' });
+    }
+
+    return res.status(200).json(products);
+  } catch (error) {
+    console.error('Error al obtener productos por subcategoría:', error);
+    return res.status(500).json({ error: 'Error al obtener los productos por subcategoría' });
+  }
+});
+
 // creando el producto
-productRouter.post('/', upload.single('prodImage'), async (req, res) => {
+productRouter.post('/', userExtractor, upload.single('prodImage'), async (req, res) => {
   try {
     const user = req.user;
     
@@ -166,7 +188,7 @@ productRouter.post('/', upload.single('prodImage'), async (req, res) => {
 
 // editando el producto
 
-productRouter.patch('/:id', upload.single('image'), async (req, res) => {
+productRouter.patch('/:id', userExtractor, upload.single('image'), async (req, res) => {
   try {
     const user = req.user;
     if (user.role !== 'admin') {
@@ -239,7 +261,7 @@ productRouter.patch('/:id', upload.single('image'), async (req, res) => {
 
 // elimiando un producto por el id
 
-productRouter.delete('/:id', async (req, res) => {
+productRouter.delete('/:id', userExtractor, async (req, res) => {
   const user = req.user;
   if (!user.role === 'admin') {
     return res
