@@ -11,7 +11,6 @@ subcategoryRouter.get('/', async (req, res) => {
   res.json(subcategories);
 });
 //  mostrando los productos por el id de la subcategoría
-// Mostrar subcategoría específica con sus productos
 subcategoryRouter.get('/:id', async (req, res) => {
   try {
     const subcategory = await Subcategory.findById(req.params.id)
