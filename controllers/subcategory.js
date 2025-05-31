@@ -2,6 +2,7 @@ const subcategoryRouter = require('express').Router();
 const Subcategory = require('../models/subcategory');
 const Category = require('../models/category');
 const User = require('../models/user');
+const { userExtractor } = require('../middlewares/auth');
 
 // Mostrar todas las subcategorías
 
@@ -9,9 +10,30 @@ subcategoryRouter.get('/', async (req, res) => {
   const subcategories = await Subcategory.find().populate('category', 'name');
   res.json(subcategories);
 });
+//  mostrando los productos por el id de la subcategoría
+// Mostrar subcategoría específica con sus productos
+subcategoryRouter.get('/:id', async (req, res) => {
+  try {
+    const subcategory = await Subcategory.findById(req.params.id)
+      .populate('category', 'name _id')
+      .populate('products', 'name price prodImage'); 
+    
+    if (!subcategory) {
+      return res.status(404).json({ message: 'Subcategoría no encontrada' });
+    }
+    
+    res.json(subcategory);
+  } catch (error) {
+    console.error('Error al obtener subcategoría:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      details: error.message,
+    });
+  }
+});
 
 // Crear subcategoría
-subcategoryRouter.post('/', async (req, res) => {
+subcategoryRouter.post('/', userExtractor, async (req, res) => {
   try {
     const user = req.user;
     if (user.role !== 'admin') {
@@ -85,7 +107,7 @@ subcategoryRouter.post('/', async (req, res) => {
 });
 
 // Editar subcategoría
-subcategoryRouter.patch('/:id', async (req, res) => { 
+subcategoryRouter.patch('/:id', userExtractor, async (req, res) => { 
   try {
     const user = req.user;
     if (user.role !== 'admin') {
@@ -178,7 +200,7 @@ subcategoryRouter.patch('/:id', async (req, res) => {
 });
 
 // eliminar la subcatefgoria por el id 
-subcategoryRouter.delete('/:id', async (req, res) => { 
+subcategoryRouter.delete('/:id', userExtractor, async (req, res) => { 
   try {
     const user = req.user;
     if (user.role !== 'admin') {

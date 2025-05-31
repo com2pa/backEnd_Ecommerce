@@ -1,4 +1,5 @@
 const categoryRouter = require('express').Router();
+const { userExtractor } = require('../middlewares/auth');
 const Category = require('../models/category');
 const Subcategory = require('../models/subcategory');
 
@@ -42,7 +43,7 @@ categoryRouter.get('/:id', async (req, res) => {
 });
 
 // creando categoria de los productos
-categoryRouter.post('/', async (req, res) => {
+categoryRouter.post('/', userExtractor, async (req, res) => {
   const user = req.user;
   if (user.role !== 'admin') {
     return res
@@ -81,7 +82,7 @@ categoryRouter.post('/', async (req, res) => {
 
 // editando la categoria
 
-categoryRouter.patch('/:id', async (req, res) => {
+categoryRouter.patch('/:id', userExtractor, async (req, res) => {
   const user = req.user;
   if (user.role !== 'admin') {
     return res
@@ -118,7 +119,7 @@ categoryRouter.patch('/:id', async (req, res) => {
 
 // eliminar una cateria por id
 
-categoryRouter.delete('/:id', async (req, res) => {
+categoryRouter.delete('/:id', userExtractor, async (req, res) => {
   const user = req.user;
   if (user.role !== 'admin') {
     return res
