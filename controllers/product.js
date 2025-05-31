@@ -2,11 +2,12 @@ const productRouter = require('express').Router();
 const Product = require('../models/product');
 const Brand = require('../models/brand');
 const Subcategory = require('../models/subcategory');
+const Aliquot = require('../models/aliquots');
 const User = require('../models/user');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
-const { createProduct } = require('../services/productServices');
+const { createProduct, updateProduct } = require('../services/productServices');
 
 // Configuración de multer 
 const storage = multer.diskStorage({
@@ -42,11 +43,8 @@ const upload = multer({
 // mostrando todos los productos
 productRouter.get('/', async (req, res) => {
   try {
-    const productos = await Product.find({})
-      // .populate('brand', 'name') // Solo el nombre de la marca
-      // .populate('subcategory', 'name') // Solo el nombre de la subcategoría
-      // .populate('aliquots', 'percentage') // Solo el nombre del aliquot
-      // .exec();
+    const productos = await Product.find({}).populate('brand', 'name').populate('subcategory', 'name').populate('aliquots', 'percentage').exec()
+   
 
     return res.status(200).json(productos);
   } catch (error) {
@@ -168,156 +166,58 @@ productRouter.post('/', upload.single('prodImage'), async (req, res) => {
 
 // editando el producto
 
+// Actualizar endpoint PATCH para usar el servicio
 productRouter.patch('/:id', upload.single('image'), async (req, res) => {
   try {
     const user = req.user;
     if (user.role !== 'admin') {
-      return res.status(401).json({
+      return res.status(403).json({
         message: 'No tienes permisos para realizar esta acción',
       });
     }
 
     const productId = req.params.id;
-    // buscamos el producto
-    const product = await Product.findById(productId);
-    // verifico el producto
-    if (!product) {
-      return res.status(404).json({ message: 'Producto no encontrado' });
-    }
-    // lo que obtenemos del body
-    const {
-      name,
-      description,
-      price,
-      stock,
-      unit,
-      unitsPerPackage,
-      minStock,
-      sku,
-      isActive,
-      subcategoryId,
-      brandId,
-      aliquotId
-    } = req.body;
-
-    // Validaciones básicas
-    if (
-      !name ||
-      !description ||
-      !price ||
-      !stock ||
-      !unit ||
-      !unitsPerPackage ||
-      !minStock ||
-      !sku ||
-      !subcategoryId ||
-      !brandId ||
-      !aliquotId ||
-      isActive === undefined
-    ) {
+    
+    // Validar campos requeridos
+    const requiredFields = [
+      'name', 'description', 'price', 'stock', 'unit', 
+      'unitsPerPackage', 'minStock', 'sku', 'isActive',
+      'subcategoryId', 'brandId', 'aliquotId'
+    ];
+    
+    const missingFields = requiredFields.filter(field => !req.body[field]);
+    if (missingFields.length > 0) {
       return res.status(400).json({
-        error: 'Faltan campos requeridos',
+        error: `Faltan campos requeridos: ${missingFields.join(', ')}`,
       });
     }
 
-    // Verificar categoría y marca en paralelo para mejor rendimiento
-    const [subcategoryExists, brandExists] = await Promise.all([
-      Subcategory.findById(subcategoryId),
-      Brand.findById(brandId),
-    ]);
+    // Convertir isActive a booleano correctamente
+    const isActive = req.body.isActive === 'true' || req.body.isActive === true;
 
-    if (!subcategoryExists) {
-      return res
-        .status(404)
-        .json({ error: 'La categoría especificada no existe' });
-    }
-
-    if (!brandExists) {
-      return res.status(404).json({ error: 'La marca especificada no existe' });
-    }
-
-    // Preparar datos de actualización
-    const updateData = {
-      name,
-      description,
-      price: Number(price),
-      stock: Number(stock) || 0,
-      unit,
-      unitsPerPackage: Number(unitsPerPackage) || 1,
-      minStock: Number(minStock) || 0,
-      sku,
-      isActive: isActive !== 'false',
-      subcategory: subcategoryId,
-      brand: brandId,
-      aliquots: aliquotId,
+    // Preparar datos para el servicio
+    const productData = {
+      name: req.body.name,
+      description: req.body.description,
+      price: parseFloat(req.body.price),
+      stock: parseInt(req.body.stock),
+      unit: req.body.unit,
+      unitsPerPackage: parseInt(req.body.unitsPerPackage),
+      minStock: parseInt(req.body.minStock),
+      sku: req.body.sku.toUpperCase(),
+      isActive: isActive, // Usar el valor convertido correctamente
+      subcategory: req.body.subcategoryId,
+      brand: req.body.brandId,
+      aliquots: req.body.aliquotId
     };
 
-    // Manejo de imagen si se subió una nueva
-    if (req.file) {
-      // Validar extensión de la imagen
-      const ext = req.file.originalname.split('.').pop().toLowerCase();
-      if (!['png', 'jpg', 'jpeg'].includes(ext)) {
-        fs.unlinkSync(req.file.path);
-        return res.status(400).json({
-          error: 'Formato de imagen no válido (solo JPG/PNG)',
-        });
-      }
-
-      // Eliminar imagen anterior si existe
-      if (product.image) {
-        const oldImagePath = path.join(
-          __dirname,
-          '..',
-          'uploads/products',
-          product.image
-        );
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
-        }
-      }
-
-      // Generar nuevo nombre y mover la imagen
-      const imageName = `product-${Date.now()}.${ext}`;
-      const imagePath = path.join(
-        __dirname,
-        '..',
-        'uploads/products',
-        imageName
-      );
-      fs.renameSync(req.file.path, imagePath);
-
-      updateData.image = imageName;
-    }
-
-    // Actualizar producto en una sola operación
-    const updatedProduct = await Product.findByIdAndUpdate(
-      productId,
-      updateData,
-      { new: true, runValidators: true }
+    // Usar el servicio de actualización
+    const updatedProduct = await updateProduct(
+      productId, 
+      productData, 
+      req.file, 
+      user._id
     );
-
-    // Actualizar referencias en categoría y marca si cambiaron
-    if (product.subcategory.toString() !== subcategoryId) {
-      await Promise.all([
-        Category.findByIdAndUpdate(product.subcategory, {
-          $pull: { products: productId },
-        }),
-        Category.findByIdAndUpdate(subcategoryId, {
-          $push: { products: productId },
-        }),
-      ]);
-    }
-
-    if (product.brand.toString() !== brandId) {
-      await Promise.all([
-        Brand.findByIdAndUpdate(product.brand, {
-          $pull: { products: productId },
-        }),
-        Brand.findByIdAndUpdate(brandId, {
-          $push: { products: productId },
-        }),
-      ]);
-    }
 
     return res.status(200).json({
       message: 'Producto actualizado exitosamente',
@@ -325,14 +225,8 @@ productRouter.patch('/:id', upload.single('image'), async (req, res) => {
     });
   } catch (error) {
     console.error('Error al actualizar producto:', error);
-
-    // Eliminar imagen nueva si hubo error después de subirla
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-
-    // Manejar error de SKU duplicado
-    if (error.code === 11000 && error.keyPattern.sku) {
+    
+    if (error.code === 11000 && error.keyPattern?.sku) {
       return res.status(400).json({
         error: 'El SKU ya está en uso por otro producto',
       });
@@ -344,6 +238,8 @@ productRouter.patch('/:id', upload.single('image'), async (req, res) => {
     });
   }
 });
+
+
 
 // elimiando un producto por el id
 
