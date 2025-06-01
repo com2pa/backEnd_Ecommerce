@@ -44,7 +44,7 @@ const userSchema = new mongoose.Schema({
   },
   shoppingHistory:[{//historia del compra
     type:Number
-  }]
+  }],  
 });
 userSchema.set('toJSON', {
     transform: (document, returnedObject) => {
