@@ -160,27 +160,36 @@ usersRouter.post('/', async (req, res) => {
 });
 // actualizacion de el token
 
-usersRouter.patch('/:id/:token', async (req, res) => {
+usersRouter.patch('/:id/:token', async (req, res) => { 
   try {
+    // obtengo el token por el params
     const token = req.params.token;
-    const decodedToken = jwt.verify(
-      token,
-      process.env.process.env.ACCESS_TOKEN_SECRET
-    );
-    const userId = decodedToken.id;
-    // cambiando la propiedad de la base de datos verificacion de correo a true
-    await User.findByIdAndUpdate(id, { verify: true });
-      return response.sendStatus(200);
+    console.log('token recibido', token);
+    // verifico el token
+    const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    console.log('token decodificado', decodedToken);
+    const id = decodedToken.id;
+    // cambio el estado del usuario a verificado
+    const user = await User.findByIdAndUpdate(
+      id,
+      { isVerified: true },
       
+    );
+    console.log('usuario verificado', user);
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    return res.status(200).json({ message: 'Usuario verificado con éxito' });
 
   } catch (error) {
+    console.error('Error en verificación:', error);
     //    encontrar el email del usuario
     const id = req.params.id;
-    const { email } = await User.findById(id);
-
+    const email = await User.findById(id);
+    console.log('email del usuario', email);
     // firmar el nuevo token
     const token = jwt.sign({ id: id }, process.env.ACCESS_TOKEN_SECRET, {
-      expiresIn: '1s',
+      expiresIn: '1d',
     });
     // enviar correo para verificacion de usuaruio registrado
 
@@ -195,46 +204,35 @@ usersRouter.patch('/:id/:token', async (req, res) => {
     });
 
     //  como enviar el correo
-
     await transporter.sendMail({
-      from: `"${process.env.EMAIL_NAME || 'Tu App'}" <${
-        process.env.EMAIL_USER
-      }>`,
-      to: email,
+      from: `"${process.env.EMAIL_NAME || 'Tu App'}" <${process.env.EMAIL_USER}>`,
+      to: User.email, 
       subject: '¡Tu enlace de verificación ha expirado! 🔄',
       html: `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaea; border-radius: 5px; overflow: hidden;">
       <div style="background: #ff6b4a; padding: 20px; text-align: center;">
         <h1 style="color: white; margin: 0;">¡Enlace expirado!</h1>
       </div>
-      
       <div style="padding: 20px;">
-        <p style="font-size: 16px;">Hola <strong>${User.name}</strong>,</p>
+        <p style="font-size: 16px;">Hola <strong>${user.name}</strong>,</p> // <-- ERROR: 'User.name' debería ser 'user.name'
         <p style="font-size: 16px;">El enlace de verificación que recibiste anteriormente ha expirado. Por seguridad, hemos generado uno nuevo para que puedas completar tu registro:</p>
-        
         <div style="text-align: center; margin: 30px 0;">
           <a href="${PAGE_URL}/verify/${id}/${token}" 
              style="background: #ff6b4a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">
             Nuevo enlace de verificación
           </a>
         </div>
-        
         <p style="font-size: 16px;">Si el botón no funciona, copia y pega este enlace en tu navegador:</p>
         <p style="font-size: 14px; color: #666; word-break: break-all;">${PAGE_URL}/verify/${id}/${token}</p>
-        
         <p style="font-size: 16px;">Este enlace estará activo por 24 horas.</p>
-        
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eaeaea;">
-          <p style="font-size: 14px; color: #666;">Equipo de Soporte<br>${
-            process.env.EMAIL_NAME || 'Tu App'
-          }</p>
+          <p style="font-size: 14px; color: #666;">Equipo de Soporte<br>${process.env.EMAIL_NAME || 'Tu App'}</p>
         </div>
       </div>
     </div>
   `,
-      text: `Hola ${User.name},\n\nEl enlace de verificación que recibiste anteriormente ha expirado. Por seguridad, hemos generado uno nuevo para que puedas completar tu registro:\n\n${PAGE_URL}/verify/${id}/${token}\n\nEste enlace estará activo por 24 horas.\n\nEquipo de Soporte,\n${
-        process.env.EMAIL_NAME || 'Tu App'
-      }`,
+      text: `Hola ${user.name},\n\nEl enlace de verificación que recibiste anteriormente ha expirado. Por seguridad, hemos generado uno nuevo para que puedas completar tu registro:\n\n${PAGE_URL}/verify/${id}/${token}\n\nEste enlace estará activo por 24 horas.\n\nEquipo de Soporte,\n${process.env.EMAIL_NAME || 'Tu App'}`
+      
     });
 
     return res
@@ -242,7 +240,7 @@ usersRouter.patch('/:id/:token', async (req, res) => {
       .json({
         error:
           'El link expiro. Se ha enviado un ¡Nuevo link! de verificacion a su correo',
-      });
+      });      
   }
 });
 
