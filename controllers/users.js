@@ -172,7 +172,8 @@ usersRouter.patch('/:id/:token', async (req, res) => {
     // cambio el estado del usuario a verificado
     const user = await User.findByIdAndUpdate(
       id,
-      { isVerified: true },
+      { verify: true },
+      { new: true } // Devuelve el documento actualizado
       
     );
     console.log('usuario verificado', user);
