@@ -1,5 +1,5 @@
 const cartRouter = require('express').Router();
-// const Cart = require('../models/cart');
+const Cart = require('../models/cart');
 // const Product = require('../models/product');
 // const Discount = require('../models/discount');
 const cartServices = require('../services/cartServices');
@@ -14,10 +14,12 @@ cartRouter.get('/', async (req, res) => {
     }
 
     // 2. Obtener carrito con toda la información necesaria
-    const cart = await Cart.findOne({ user: user._id })
-      .populate('items.product')
-      .populate('discount');
-
+    const cart = await Cart.findOne({ user: user.id })
+    .populate('items.product items.quantity total subtotal')
+    .populate('discount')
+    .populate('user','name')    
+    
+    // console.log(cart, 'obteniendo');
     if (!cart) {
       return res.status(200).json({
         success: true,
@@ -31,10 +33,7 @@ cartRouter.get('/', async (req, res) => {
       });
     }
 
-    res.status(200).json({
-      success: true,
-      cart,
-    });
+    res.status(200).json(cart);
   } catch (error) {
     console.error('Error al obtener carrito:', error);
     res.status(500).json({
@@ -47,7 +46,7 @@ cartRouter.post('/', async (req, res) => {
   try {
     // 1. Verificar usuario
     const user = req.user;
-    if (!user || user.role !== 'user') {
+    if (!user || user.role !== 'user' ) {
       return res.status(401).json({ message: 'No autorizado' });
     }
 
@@ -119,9 +118,11 @@ cartRouter.put('/:productId', async (req, res) => {
     // 2. Obtener parámetros
     const { productId } = req.params;
     const { quantity } = req.body;
-
+    
+    console.log(`Actualizando producto ${productId} a cantidad ${quantity}`);
+    
     // 3. Validar entrada
-    if (!quantity){
+    if (!quantity) {
       return res.status(400).json({ 
         success: false,
         message: 'La cantidad debe ser un número válido' 
@@ -129,7 +130,14 @@ cartRouter.put('/:productId', async (req, res) => {
     }
 
     const numericQuantity = parseInt(quantity);
-    if (numericQuantity <=0) {
+    if (isNaN(numericQuantity)) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'La cantidad debe ser un número válido' 
+        });
+    }
+
+    if (numericQuantity <= 0) {
       return res.status(400).json({ 
         success: false,
         message: 'La cantidad debe ser mayor a 0' 
@@ -138,12 +146,28 @@ cartRouter.put('/:productId', async (req, res) => {
 
     // 4. Actualizar cantidad
     const result = await cartServices.updateProductQuantity(
-      user._id, 
+      user.id, 
       productId, 
       numericQuantity
     );
+    
+    console.log('Resultado de updateProductQuantity:', result);
 
-    res.status(200).json(result);
+    // 5. Verificar si se actualizó correctamente
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    // 6. Obtener el carrito actualizado para devolverlo
+    const freshCart = await Cart.findOne({ user: user.id })
+      .populate('items.product')
+      .populate('discount');
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      cart: freshCart
+    });
   } catch (error) {
     console.error('Error en PUT /cart/:productId:', error);
     const status = error.message.includes('no encontrado') ? 404 : 
@@ -153,8 +177,7 @@ cartRouter.put('/:productId', async (req, res) => {
       message: error.message
     });
   }
-})
-
+});
 
 
 
