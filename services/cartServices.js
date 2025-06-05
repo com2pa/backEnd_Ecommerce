@@ -137,61 +137,118 @@ const removeFromCart = async (userId, productId) => {
     throw error;
   }
 };
-// editar la cantidad de producto
+
 // Editar cantidad de producto en el carrito
+// const updateProductQuantity = async (userId, productId, newQuantity) => {
+//   try {
+//     // usuario 
+//     console.log('Iniciando actualización de cantidad...');
+//     // 1. Validar que la nueva cantidad sea válida
+//     if (newQuantity <=0) {
+//       throw new Error('La cantidad debe ser un número positivo');
+//     }
+
+//     // 2. Verificar producto y stock
+//     const product = await Product.findById(productId);
+//     // console.log('si existe producto ',product)
+//     if (!product) throw new Error('Producto no encontrado');
+//     if (product.stock < newQuantity) {
+//       throw new Error(`Stock insuficiente. Disponible: ${product.stock}`);
+//     }
+
+//     // 3. Buscar carrito relacionado al usuario
+//     const cartProducto = await Cart.findOne({ user: userId });
+//     console.log('si existe el carrito', cartProducto)
+//     if (!cartProducto) {
+//       throw new Error('Carrito no encontrado');
+//     }
+
+//     // 4. Buscar item en el carrito
+//     const itemIndex = cartProducto.items.findIndex(
+//       (item) => item.product.toString() === productId.toString()
+//     );
+//     // console.log('encontrado',itemIndex);
+
+//     if (itemIndex === -1) {
+//       throw new Error('Producto no encontrado en el carrito');
+//     }
+
+//     // 5. Actualizar cantidad y precio
+//     cartProducto.items[itemIndex].quantity = newQuantity;
+//     cartProducto.items[itemIndex].price = product.price;
+
+//     // 6. Recalcular totales
+//     const { subtotal, total } = calculateCartTotals(cartProducto);
+//     cartProducto.subtotal = subtotal;
+//     cartProducto.total = total;
+//     cartProducto.lastUpdated = new Date();
+
+//     await cartProducto.save();
+
+//     return {
+//       success: true,
+//       message: 'Cantidad actualizada correctamente',
+//       car:cartProducto
+//     };
+//   } catch (error) {
+//     console.error('Error al actualizar cantidad:', error);
+//     throw error;
+//   }
+// };
 const updateProductQuantity = async (userId, productId, newQuantity) => {
   try {
-    // 1. Validar que la nueva cantidad sea válida
-    if (newQuantity <=0) {
+    console.log('Iniciando actualización de cantidad...');
+    
+    // Validación de cantidad
+    if (newQuantity <= 0) {
       throw new Error('La cantidad debe ser un número positivo');
     }
 
-    // 2. Verificar producto y stock
+    // Verificar producto y stock
     const product = await Product.findById(productId);
     if (!product) throw new Error('Producto no encontrado');
     if (product.stock < newQuantity) {
       throw new Error(`Stock insuficiente. Disponible: ${product.stock}`);
     }
 
-    // 3. Buscar carrito existente
-    let cart = await Cart.findOne({ user: userId });
+    // Buscar el carrito primero
+    const cart = await Cart.findOne({ user: userId });
     if (!cart) {
       throw new Error('Carrito no encontrado');
     }
 
-    // 4. Buscar item en el carrito
+    // Encontrar el índice del producto en el carrito
     const itemIndex = cart.items.findIndex(
-      (item) => item.product.toString() === productId.toString()
+      item => item.product.toString() === productId.toString()
     );
-
+    
     if (itemIndex === -1) {
       throw new Error('Producto no encontrado en el carrito');
     }
 
-    // 5. Actualizar cantidad
+    // Actualizar la cantidad y el precio
     cart.items[itemIndex].quantity = newQuantity;
+    cart.items[itemIndex].price = product.price;
 
-    // 6. Recalcular totales
-    cart.subtotal = cart.items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
-    cart.total = cart.subtotal;
+    // Recalcular totales
+    const { subtotal, total } = calculateCartTotals(cart);
+    cart.subtotal = subtotal;
+    cart.total = total;
     cart.lastUpdated = new Date();
 
-    await cart.save();
+    // Guardar los cambios
+    const updatedCart = await cart.save();
 
     return {
       success: true,
       message: 'Cantidad actualizada correctamente',
-      cart: cart
+      cart: updatedCart
     };
   } catch (error) {
-    console.error('Error al actualizar cantidad:', error);
+    console.error('Error detallado al actualizar cantidad:', error);
     throw error;
   }
 };
-
 
 module.exports = {
   addToCart,
