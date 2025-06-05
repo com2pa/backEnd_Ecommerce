@@ -195,16 +195,16 @@ cartRouter.delete('/:productId', async (req, res) => {
     console.log('producto a eliminar:', productId);
 
     // 3. Delegar lógica de negocio al servicio
-    const updatedCart = await cartServices.removeFromCart(user._id, productId);
+     const result = await cartServices.removeFromCart(user._id, productId);
     console.log(
       'actualizacion del carrito despues de eliminar producto',
-      updatedCart
+      result
     );
 
     res.status(200).json({
       success: true,
       message: 'Producto eliminado del carrito',
-      cart: updatedCart,
+      cart: result.cart
     });
   } catch (error) {
     console.error('Error al eliminar producto del carrito:', error);
