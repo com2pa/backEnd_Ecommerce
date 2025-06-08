@@ -27,18 +27,8 @@ const discountSchema = new mongoose.Schema(
       min: 0,
       max: 100,
     },
-    start_date: {
-      type: Date,
-      required: true,
-      set: parseCustomDate, // Convierte al guardar
-      get: formatToCustomDate, // Convierte al leer
-    },
-    end_date: {
-      type: Date,
-      required: true,
-      set: parseCustomDate, // Convierte al guardar
-      get: formatToCustomDate, // Convierte al leer
-    },
+    start_date: { type: Date},
+    end_date: { type: Date},
     products: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -54,8 +44,8 @@ const discountSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
-  }
-  // { timestamps: true }
+  },
+  { timestamps: true }
 );
 
 discountSchema.set('toJSON', {

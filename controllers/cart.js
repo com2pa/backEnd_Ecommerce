@@ -32,7 +32,6 @@ cartRouter.get('/', async (req, res) => {
         }
       });
     }
-
     res.status(200).json(cart);
   } catch (error) {
     console.error('Error al obtener carrito:', error);

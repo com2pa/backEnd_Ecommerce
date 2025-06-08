@@ -80,7 +80,7 @@ app.use('/api/category', auditMiddleware('Category'),  categoryRouter);
 app.use('/api/brand', userExtractor, auditMiddleware('Brand'), BrandRouter);
 app.use('/api/subcategory', auditMiddleware('Subcategory'),  subcategoryRouter);
 app.use('/api/product',  auditMiddleware('Product'), productRouter);
-app.use('/api/discount',  userExtractor,  auditMiddleware('Discount'),  discountRouter);
+app.use('/api/discount',    auditMiddleware('Discount'),  discountRouter);
 app.use('/api/cart', userExtractor, auditMiddleware('Cart'), cartRouter);
 app.use('/api/order', userExtractor, auditMiddleware('Order'), orderRouter);
 app.use('/api/aliquots',  userExtractor,  auditMiddleware('Aliquot'),  aliquotsRouter);
