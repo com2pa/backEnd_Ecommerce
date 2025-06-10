@@ -6,7 +6,7 @@ const Product = require('../models/product');
 // Mostrar todos los descuentos
 discountRouter.get('/', async (req, res) => {
   const discounts = await Discount.find().populate('products', 'name');
-  console.log('todos los descuentos ', discounts);
+  // console.log('todos los descuentos ', discounts);
   res.json(discounts);
 });
 

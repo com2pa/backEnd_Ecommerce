@@ -32,6 +32,16 @@ const cartSchema = new mongoose.Schema(
         default: null,
       },
     ],
+    aliquot:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref:'Aliquot',
+    },
+    tasa:[
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref:'BCV',
+      }
+    ],
     subtotal: {
       type: Number,
       default: 0,

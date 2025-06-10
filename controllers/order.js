@@ -24,7 +24,56 @@ orderRouter.get('/', async (req, res) => {
     });
   }
 });
+// En tu controlador de órdenes
+orderRouter.get('/:id', async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    
+    if (!order) {
+      return res.status(404).json({ message: 'Orden no encontrada' });
+    }
 
+    // Formatear respuesta con todos los detalles
+    const response = {
+      orderNumber: order.orderNumber,
+      items: order.items.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.priceUSD,
+        priceDetails: {
+          USD: item.priceUSD,
+          EUR: item.priceEUR,
+          VES: item.priceVES
+        },
+        discount: item.hasDiscount ? {
+          percentage: item.discountPercentage,
+          amount: item.discountAmount
+        } : null,
+        taxes: item.aliquots,
+        totalWithTaxes: item.totalWithTaxes
+      })),
+      subtotal: {
+        USD: order.subtotal,
+        EUR: order.subtotal * (1 / order.exchangeRates.EUR),
+        VES: order.subtotal * order.exchangeRates.USD
+      },
+      discount: {
+        amount: order.discountAmount,
+        percentage: (order.discountAmount / order.subtotal) * 100
+      },
+      totals: order.totals,
+      taxes: order.taxes,
+      paymentFee: order.paymentFee,
+      grandTotal: order.grandTotal,
+      paymentMethod: order.paymentMethod,
+      createdAt: order.createdAt
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 // creando la orden
 orderRouter.post('/', async (req, res) => {
   try {

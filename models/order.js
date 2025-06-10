@@ -57,17 +57,42 @@ const orderSchema = new mongoose.Schema({
       percentage: Number,
     },
   ],
-  subtotal: Number,
-  discountAmount: Number,
-  total: Number,
-  paymentMethod: String,
-  orderNumber: {
-    type: String,
-    unique: true,
-    default: function () {
-      return 'ORD-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-    },
+  totals: {
+    USD: { type: Number, required: true },
+    EUR: { type: Number, required: true },
+    VES: { type: Number, required: true }
   },
+  taxes: {
+    total: { type: Number, required: true },
+    aliquotsSummary: [{
+      code: { type: String, required: true },
+      name: { type: String, required: true },
+      percentage: { type: Number, required: true },
+      amount: { type: Number, required: true }
+    }]
+  },
+  paymentFee: { type: Number, default: 0 },
+  grandTotal: {
+    USD: { type: Number, required: true },
+    EUR: { type: Number, required: true },
+    VES: { type: Number, required: true }
+  },
+  exchangeRates: {
+    USD: { type: Number, required: true },
+    EUR: { type: Number, required: true },
+    lastUpdated: { type: Date, required: true }
+  },
+  // subtotal: Number,
+  // discountAmount: Number,
+  // total: Number,
+  // paymentMethod: String,
+  // orderNumber: {
+  //   type: String,
+  //   unique: true,
+  //   default: function () {
+  //     return 'ORD-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+  //   },
+  // },
   createdAt: {
     type: Date,
     default: Date.now,

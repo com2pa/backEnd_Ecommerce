@@ -83,8 +83,9 @@ const addToCart = async (userId, productId, quantity) => {
   }
 };
 
-// Nueva función para calcular totales
+// Nueva función para calcular totales 
 const calculateCartTotals = (cart) => {
+
   const subtotal = cart.items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
