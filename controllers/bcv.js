@@ -25,7 +25,8 @@ const validateDate = (dateString) => {
 bcvRouter.get('/', async (req, res) => {
   try {
     const fecha = validateDate(req.query.fecha);
-    const moneda = validateCurrency(req.query.moneda || 'USD');
+    const moneda = validateCurrency(req.query.moneda || 'USD' || 'EUR');
+
 
     const tasa = await getBCV(fecha, moneda);
     
