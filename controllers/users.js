@@ -4,6 +4,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const { PAGE_URL } = require('../config');
+const { updateUserRole } = require('../services/userRoleServices');
+const { userExtractor, roleAuthorization } = require('../middlewares/auth');
 // obtendiend todos los usuario
 usersRouter.get('/', async (req, res) => {
   try {
@@ -158,8 +160,38 @@ usersRouter.post('/', async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 });
-// actualizacion de el token
 
+// Actualizar rol de usuario
+usersRouter.patch('/:id/role',userExtractor ,roleAuthorization(['superadmin']), async (req, res) => {
+try {
+    const { id } = req.params;
+    const { role } = req.body;
+    const requestingUser = req.user; // Obtenido del middleware de autenticación
+
+    const updatedUser = await updateUserRole(id, role, requestingUser);
+
+    res.json({
+      success: true,
+      message: 'Rol actualizado correctamente',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Error al actualizar rol:', error);
+    
+    let statusCode = 500;
+    if (error.message === 'Rol no válido') statusCode = 400;
+    if (error.message === 'No autorizado para cambiar roles') statusCode = 403;
+    if (error.message === 'Usuario no encontrado') statusCode = 404;
+
+    res.status(statusCode).json({ 
+      success: false,
+      message: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// actualizacion de el token
 usersRouter.patch('/:id/:token', async (req, res) => { 
   try {
     // obtengo el token por el params
@@ -186,8 +218,8 @@ usersRouter.patch('/:id/:token', async (req, res) => {
     console.error('Error en verificación:', error);
     //    encontrar el email del usuario
     const id = req.params.id;
-    const email = await User.findById(id);
-    console.log('email del usuario', email);
+    const user = await User.findById(id);
+    console.log('email del usuario', user);
     // firmar el nuevo token
     const token = jwt.sign({ id: id }, process.env.ACCESS_TOKEN_SECRET, {
       expiresIn: '1d',
@@ -207,7 +239,7 @@ usersRouter.patch('/:id/:token', async (req, res) => {
     //  como enviar el correo
     await transporter.sendMail({
       from: `"${process.env.EMAIL_NAME || 'Tu App'}" <${process.env.EMAIL_USER}>`,
-      to: User.email, 
+      to: user.email, 
       subject: '¡Tu enlace de verificación ha expirado! 🔄',
       html: `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaea; border-radius: 5px; overflow: hidden;">
@@ -244,5 +276,6 @@ usersRouter.patch('/:id/:token', async (req, res) => {
       });      
   }
 });
+
 
 module.exports = usersRouter;
