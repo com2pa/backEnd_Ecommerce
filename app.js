@@ -25,6 +25,7 @@ const roleManagementRouter = require('./controllers/roleManagement');
 const refresRouter = require('./controllers/refres');
 const bcvRouter = require('./controllers/bcv');
 const path = require('path');
+const versionRouter = require('./controllers/version');
 (
   // conexion base de datos
   async () => {
@@ -89,5 +90,8 @@ app.use('/api/roles',  userExtractor,  auditMiddleware('User'),  roleManagementR
 app.use('/api/tasas-bcv', bcvRouter); 
 // Servir archivos estáticos desde la carpeta uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// mostrando la version del sotfware
+app.use('/api/version',versionRouter);
 
 module.exports = app;
