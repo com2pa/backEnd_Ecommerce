@@ -10,7 +10,7 @@ const { userExtractor, roleAuthorization } = require('../middlewares/auth');
 usersRouter.get('/', async (req, res) => {
   try {
       const users = await User.find({});
-      console.log('usuario conectados',users)
+      // console.log('usuario conectados',users)
 
       if (!users) return res.status(404).json({ message: 'No hay usuarios' });
 
