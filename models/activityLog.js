@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-
+const mongoosePaginate = require('mongoose-paginate-v2');
 const activityLogSchema = new mongoose.Schema(
   {
     user: {
@@ -49,6 +49,7 @@ const activityLogSchema = new mongoose.Schema(
     timestamps: true, // Crea createdAt y updatedAt automáticamente
   }
 );
+activityLogSchema.plugin(mongoosePaginate);
 
 // Índices para mejor performance
 activityLogSchema.index({ user: 1 });
