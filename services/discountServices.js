@@ -10,6 +10,17 @@ const discountService = {
   // Crear un nuevo descuento
   createDiscount: async (discountData, userId) => {
     const { code, percentage, start_date, end_date, productId } = discountData;
+    if (!code || percentage === undefined || !start_date || !end_date) {
+      throw new Error('Faltan campos requeridos: code, percentage, start_date o end_date');
+    }
+    // Validaciones adicionales necesarias
+    if (percentage < 0 || percentage > 100) {
+      throw new Error('El porcentaje debe ser mayor que 0 y menor que 100');
+    }
+
+    if (new Date(start_date) >= new Date(end_date)) {
+      throw new Error('La fecha de inicio debe ser anterior a la fecha de fin');
+    }
 
     // Normalizar productIds a array
     let productIdsArray;
@@ -38,7 +49,7 @@ const discountService = {
       end_date,
       products: productIdsArray,
       createdBy: userId,
-      online: true,
+      online:  true,// Calculado según fechas
     });
 
     return await newDiscount.save();
@@ -47,7 +58,7 @@ const discountService = {
   // Actualizar un descuento
   updateDiscount: async (discountId, discountData, userId) => {
     const { code, percentage, start_date, end_date, productId, online } = discountData;
-
+    
     // Normalizar productIds a array (igual que en create)
     let productIdsArray;
     if (typeof productId === 'string') {
@@ -61,33 +72,73 @@ const discountService = {
       productIdsArray = [productId];
     }
 
-    // Verificar que los productos existen
+    // // Verificar que los productos existen   
+    if (productIdsArray.length > 0) {
     const products = await Product.find({ _id: { $in: productIdsArray } });
-    if (products.length !== productIdsArray.length) {
-      throw new Error('Algunos productos no existen');
+      if (products.length !== productIdsArray.length) {
+        throw new Error('Algunos productos no existen');
+      }
+    } 
+    // Verificar si el código ya existe (si se está cambiando)
+    if (code) {
+      const existingCode = await Discount.findOne({ code, _id: { $ne: discountId } });
+      if (existingCode) {
+        throw new Error('El código de descuento ya está en uso');
+      }
     }
 
     // Actualizar el descuento
     const updatedDiscount = await Discount.findByIdAndUpdate(
-      discountId,
+    discountId,
       {
-        code,
-        percentage,
-        start_date,
-        end_date,
-        products: productIdsArray,
-        online,
+        ...discountData,
         updatedBy: userId,
+        // No permitir que online se establezca manualmente
+        online: undefined 
       },
       { new: true, runValidators: true }
     ).populate('products', 'name');
 
-    if (!updatedDiscount) {
-      throw new Error('Descuento no encontrado');
-    }
+      // Actualizar estado según fechas
+      const now = new Date();
+      const isActive = new Date(updatedDiscount.start_date) <= now && 
+                      new Date(updatedDiscount.end_date) >= now;
+      
+      if (isActive !== updatedDiscount.online) {
+        updatedDiscount.online = isActive;
+        await updatedDiscount.save();
+      }
 
     return updatedDiscount;
   },
+  // // Actualizar estados de descuentos según fechas
+  updateDiscountsStatus: async () => {
+    const now = new Date();
+    // Desactivar descuentos que ya pasaron su fecha de fin
+    await Discount.updateMany(
+      { end_date: { $lt: now }, online: true },
+      { $set: { online: false } }
+    );
+    // Activar descuentos que están en su período de vigencia
+    await Discount.updateMany(
+      { 
+        start_date: { $lte: now },
+        end_date: { $gte: now },
+        online: false 
+      },
+      { $set: { online: true } }
+    );
+  },
+  // Método para obtener descuentos activos
+  getActiveDiscounts: async () => {
+    const now = new Date();
+    return await Discount.find({
+      start_date: { $lte: now },
+      end_date: { $gte: now },
+      online: true
+    }).populate('products', 'name price');
+  },
+
 
   // Eliminar un descuento
   deleteDiscount: async (discountId) => {
