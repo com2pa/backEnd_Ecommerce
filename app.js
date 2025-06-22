@@ -84,7 +84,7 @@ app.use('/api/product',  auditMiddleware('Product'), productRouter);
 app.use('/api/discount',    auditMiddleware('Discount'),  discountRouter);
 app.use('/api/cart', userExtractor, auditMiddleware('Cart'), cartRouter);
 app.use('/api/order', userExtractor, auditMiddleware('Order'), orderRouter);
-app.use('/api/aliquots',  userExtractor,  auditMiddleware('Aliquot'),  aliquotsRouter);
+app.use('/api/aliquots',auditMiddleware('Aliquot'),  aliquotsRouter);
 app.use('/api/activity-logs', activityLogsRouter);
 app.use('/api/roles',  userExtractor,  auditMiddleware('User'),  roleManagementRouter);
 app.use('/api/tasas-bcv', bcvRouter); 
