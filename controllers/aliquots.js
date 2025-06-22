@@ -2,15 +2,16 @@ const aliquotsRouter = require('express').Router();
 const Aliquot = require('../models/aliquots');
 const aliquotsService = require('../services/aliquotsServices');
 const systemLogger = require('../help/system/systemLogger');
+const { userExtractor } = require('../middlewares/auth');
 
 // mostrando todas las alicuotas
 aliquotsRouter.get('/', async (req, res) => {
   try {
-    // 1. Verificar autenticación 
-    const user = req.user;
-    if (user.role != 'admin') {
-      return res.status(401).json({ success: false, error: 'No autenticado' });
-    }
+    // // 1. Verificar autenticación 
+    // const user = req.user;
+    // if (user.role != 'admin') {
+    //   return res.status(401).json({ success: false, error: 'No autenticado' });
+    // }
     const alicuota = await Aliquot.find({})
     // // 2. Obtener parámetros de consulta
     // const { 
@@ -81,7 +82,7 @@ aliquotsRouter.get('/', async (req, res) => {
   }
 });
 // creando la alicuotas
-aliquotsRouter.post('/', async (req, res) => {
+aliquotsRouter.post('/',userExtractor, async (req, res) => {
   try {
     // 1. Verificar usuario
     const user = req.user;
@@ -119,7 +120,7 @@ aliquotsRouter.post('/', async (req, res) => {
   }
 });
 // elimino la alicuota
-aliquotsRouter.delete('/:id', async (req, res) => {
+aliquotsRouter.delete('/:id',userExtractor, async (req, res) => {
   try {
     // 1. Verificar usuario autenticado y con rol adecuado
     const user = req.user;
@@ -168,7 +169,7 @@ aliquotsRouter.delete('/:id', async (req, res) => {
 });
 
 // edito la alicuota
-aliquotsRouter.patch('/:id', async (req, res) => {
+aliquotsRouter.patch('/:id',userExtractor, async (req, res) => {
   try {
     // 1. Verificar autenticación y permisos
     const user = req.user;
