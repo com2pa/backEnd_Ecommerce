@@ -15,9 +15,18 @@ cartRouter.get('/', async (req, res) => {
 
     // 2. Obtener carrito con toda la información necesaria
     const cart = await Cart.findOne({ user: user.id })
-    .populate('items.product items.quantity total subtotal')
-    .populate('discount')
-    .populate('user','name')    
+    .populate({
+    path: 'items.product',
+    populate: [
+      { path: 'aliquots' },
+      { path: 'brand' },
+      { path: 'subcategory' },
+      { path: 'user', select: 'name' }
+        ]
+      })
+      .populate('discount')
+      .populate('user', 'name')
+      .populate('tasa', 'percentage');    
     
     // console.log(cart, 'obteniendo');
     if (!cart) {
