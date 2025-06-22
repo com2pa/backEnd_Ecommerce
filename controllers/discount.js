@@ -151,6 +151,27 @@ discountRouter.post('/', userExtractor, async (req, res) => {
   }
 });
 
+// Agregar una nueva ruta para forzar actualización de estados
+discountRouter.post('/update-status', userExtractor, async (req, res) => {
+  try {
+    const user = req.user;
+    if (user.role !== 'admin') {
+      return res.status(401).json({
+        message: 'No tienes permisos para realizar esta acción',
+      });
+    }
+
+    const result = await discountService.updateDiscountsStatus();
+    res.json({
+      message: 'Estados de descuentos actualizados',
+      ...result
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+
 // Eliminar descuento
 discountRouter.delete('/:id', userExtractor, async (req, res) => { 
   try {

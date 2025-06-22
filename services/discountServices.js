@@ -59,7 +59,7 @@ const discountService = {
   updateDiscount: async (discountId, discountData, userId) => {
     const { code, percentage, start_date, end_date, productId, online } = discountData;
     
-    // Normalizar productIds a array (igual que en create)
+    // Normalizar productIds a array 
     let productIdsArray;
     if (typeof productId === 'string') {
       productIdsArray = productId
@@ -87,30 +87,35 @@ const discountService = {
       }
     }
 
+     // Preparar datos de actualización
+    const updateData = {
+      ...discountData,
+      updatedBy: userId,
+      products: productIdsArray
+    };
+
+    // Si online es explícitamente false, mantenerlo así (desactivación manual)
+    // Si es true o undefined, calcular según fechas
+    if (online !== false) {
+      delete updateData.online; // Dejar que el pre-save lo calcule
+    }
+
     // Actualizar el descuento
-    const updatedDiscount = await Discount.findByIdAndUpdate(
-    discountId,
-      {
-        ...discountData,
-        updatedBy: userId,
-        // No permitir que online se establezca manualmente
-        online: undefined 
-      },
+     const updatedDiscount = await Discount.findByIdAndUpdate(
+      discountId,
+      updateData,
       { new: true, runValidators: true }
     ).populate('products', 'name');
-
-      // Actualizar estado según fechas
-      const now = new Date();
-      const isActive = new Date(updatedDiscount.start_date) <= now && 
-                      new Date(updatedDiscount.end_date) >= now;
-      
-      if (isActive !== updatedDiscount.online) {
-        updatedDiscount.online = isActive;
+    // / Si fue una desactivación manual, no recalcular
+      if (online !== false) {
+        // Forzar recálculo del estado
+        updatedDiscount.online = updatedDiscount.checkStatus();
         await updatedDiscount.save();
       }
 
-    return updatedDiscount;
-  },
+      return updatedDiscount;
+    },
+
   // // Actualizar estados de descuentos según fechas
   updateDiscountsStatus: async () => {
     const now = new Date();

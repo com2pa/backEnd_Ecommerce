@@ -47,6 +47,17 @@ const discountSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+// verificando el stado
+discountSchema.methods.checkStatus = function() {
+  const now = new Date();
+  return this.start_date <= now && this.end_date >= now;
+};
+
+// Modificar el pre-save para actualizar el estado automáticamente
+discountSchema.pre('save', function(next) {
+  this.online = this.checkStatus();
+  next();
+});
 
 discountSchema.set('toJSON', {
   transform: (document, returnedObject) => {
