@@ -12,7 +12,6 @@ cartRouter.get('/', async (req, res) => {
     if (!user || user.role !== 'user') {
       return res.status(401).json({ message: 'No autorizado' });
     }
-
     // 2. Obtener carrito con toda la información necesaria
     const cart = await Cart.findOne({ user: user.id })
     .populate({
