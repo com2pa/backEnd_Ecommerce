@@ -49,6 +49,34 @@ cartRouter.get('/', async (req, res) => {
     });
   }
 });
+// verificar estado del carrito
+cartRouter.get('/check-status', async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ message: 'No autorizado' });
+    }
+
+    const cart = await Cart.findOne({ user: user._id });
+     // Calcular isExpired primero
+   const isExpired = !cart || 
+                     (cart.expiresAt === undefined && cart.items?.length > 0) ||
+                     (cart.expiresAt && cart.expiresAt <= new Date());
+    console.log(`Verificando estado del carrito: 
+      Existe: ${!!cart}, 
+      Expiración: ${cart?.expiresAt}, 
+      isExpired: ${isExpired}, 
+      Hora actual: ${new Date()}`);
+    res.status(200).json({
+      exists: !!cart,
+      isExpired: !cart || (cart.expiresAt && cart.expiresAt <= new Date()),
+      isCheckoutPending: cart?.isCheckoutPending || false
+    });
+  } catch (error) {
+    console.error('Error verificando estado del carrito:', error);
+    res.status(500).json({ message: 'Error al verificar carrito' });
+  }
+});
 cartRouter.post('/', async (req, res) => {
   try {
     // 1. Verificar usuario
@@ -95,6 +123,7 @@ cartRouter.post('/', async (req, res) => {
     // 3. Delegar lógica de negocio al servicio
       const updatedCart = await cartServices.addToCart(user._id, productId, quantity);
       console.log('actualizacion del carrito', updatedCart)
+      
 
    res.status(200).json({
      success: true,
@@ -157,7 +186,7 @@ cartRouter.put('/:productId', async (req, res) => {
       productId, 
       numericQuantity
     );
-    
+   
     console.log('Resultado de updateProductQuantity:', result);
 
     // 5. Verificar si se actualizó correctamente
@@ -185,9 +214,6 @@ cartRouter.put('/:productId', async (req, res) => {
     });
   }
 });
-
-
-
 // eliminando un elemento del carrito
 cartRouter.delete('/:productId', async (req, res) => {
   try {
@@ -206,8 +232,7 @@ cartRouter.delete('/:productId', async (req, res) => {
     console.log(
       'actualizacion del carrito despues de eliminar producto',
       result
-    );
-
+    );    
     res.status(200).json({
       success: true,
       message: 'Producto eliminado del carrito',
@@ -219,6 +244,93 @@ cartRouter.delete('/:productId', async (req, res) => {
     res.status(statusCode).json({
       success: false,
       message: error.message,
+    });
+  }
+});
+// Añade estas rutas a tu cartRouter:
+
+// Iniciar proceso de pago (marcar carrito como pendiente)
+cartRouter.post('/checkout/start', async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user || user.role !== 'user') {
+      return res.status(401).json({ message: 'No autorizado' });
+    }
+
+    const cart = await Cart.findOne({ user: user._id });
+    if (!cart) {
+      return res.status(404).json({ message: 'Carrito no encontrado' });
+    }
+
+    cart.isCheckoutPending = true;
+    await cart.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Proceso de pago iniciado',
+      cart
+    });
+  } catch (error) {
+    console.error('Error al iniciar pago:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al iniciar proceso de pago'
+    });
+  }
+});
+
+// Completar pago (eliminar carrito)
+cartRouter.post('/checkout/complete', async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user || user.role !== 'user') {
+      return res.status(401).json({ message: 'No autorizado' });
+    }
+
+    // Eliminar el carrito directamente (sin cancelar timers)
+    const deletedCart = await Cart.findOneAndDelete({ user: user._id });
+
+    if (!deletedCart) {
+      return res.status(404).json({ message: 'Carrito no encontrado' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Pago completado y carrito eliminado',
+      cart: deletedCart
+    });
+  } catch (error) {
+    console.error('Error al completar pago:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al completar el pago'
+    });
+  }
+});
+
+// Ruta para limpieza manual (opcional, para administración)
+cartRouter.delete('/cleanup', async (req, res) => {
+  try {
+    const abandonedCarts = await Cart.find({
+      expiresAt: { $lte: new Date() },
+      isCheckoutPending: false
+    });
+
+    let deletedCount = 0;
+    for (const cart of abandonedCarts) {
+      await cart.remove();
+      deletedCount++;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Se eliminaron ${deletedCount} carritos abandonados`
+    });
+  } catch (error) {
+    console.error('Error en limpieza manual:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error en limpieza manual'
     });
   }
 });

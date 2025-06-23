@@ -1,6 +1,10 @@
 const Cart = require('../models/cart');
 const Product = require('../models/product');
 const Discount = require('../models/discount');
+const {setTimeout} =require('timers/promises')
+
+// // Objeto para almacenar los timers de eliminación
+const cartDeletionTimers = new Map();
 
 // Función async para manejar operaciones asíncronas
 const addToCart = async (userId, productId, quantity) => {
@@ -53,7 +57,10 @@ const addToCart = async (userId, productId, quantity) => {
         price: finalPrice,
       });
     }
-
+    // Establecer expiresAt manualmente si no está en checkout
+    if (!cart.isCheckoutPending) {
+      cart.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    }
     // 6. Añadir descuento si existe y no está ya en el carrito
     if (discount && !cart.discount.some((d) => d._id.equals(discount._id))) {
       cart.discount.push(discount._id);
@@ -251,8 +258,10 @@ const updateProductQuantity = async (userId, productId, newQuantity) => {
   }
 };
 
+
 module.exports = {
   addToCart,
   removeFromCart,
   updateProductQuantity,
+  
 };
