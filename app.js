@@ -26,6 +26,7 @@ const refresRouter = require('./controllers/refres');
 const bcvRouter = require('./controllers/bcv');
 const path = require('path');
 const versionRouter = require('./controllers/version');
+const messageRouter = require('./controllers/message');
 (
   // conexion base de datos
   async () => {
@@ -88,6 +89,7 @@ app.use('/api/aliquots',auditMiddleware('Aliquot'),  aliquotsRouter);
 app.use('/api/activity-logs', activityLogsRouter);
 app.use('/api/roles',  userExtractor,  auditMiddleware('User'),  roleManagementRouter);
 app.use('/api/tasas-bcv', bcvRouter); 
+app.use('/api/contactame',messageRouter);
 // Servir archivos estáticos desde la carpeta uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
