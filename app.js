@@ -72,6 +72,8 @@ app.use(express.urlencoded({ extended: true }));
 // app.use('/api/users', require('./routes/users'))
 // app.use('/api/orders', require('./routes/orders'))
 
+
+
 app.use('/api/registration', usersRouter);
 app.use('/api/login', loginRouter);
 app.use('/api/logout', logoutRouter);
@@ -96,4 +98,10 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // mostrando la version del sotfware
 app.use('/api/version',versionRouter);
 
-module.exports = app;
+let io;
+const setSocketIO = (socketIO) => {
+  io = socketIO;
+  // Pasar io al router de mensajes si es necesario
+  app.set('io', io);
+};
+module.exports = {app,setSocketIO};
