@@ -56,7 +56,17 @@ messageRouter.post('/',async(req,res)=>{
         })
 
         const savedMessage = await newMessage.save()
-
+        // Obtener io desde la app
+        const io = req.app.get('io');
+        
+        // Emitir evento de nuevo mensaje a los admins
+        if (io) {
+            console.log('Emitting nuevo_mensaje event');
+            io.to('admin-room').emit('nuevo_mensaje', {
+                ...savedMessage.toObject(),
+                notification: `Nuevo mensaje de ${name}`
+            });
+        }
         // Respuesta exitosa
         res.status(201).json({
         message: 'Mensaje recibido correctamente',
