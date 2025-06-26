@@ -265,4 +265,88 @@ messageRouter.patch('/:id', async (req, res) => {
     }
 });
 
+// respues al cliente
+messageRouter.post('/:id/responder', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { respuesta } = req.body;
+
+        if (!respuesta || respuesta.trim().length === 0) {
+            console.log('Respuesta vacía recibida');
+            return res.status(400).json({ error: 'La respuesta no puede estar vacía' });
+        }
+
+        // Buscar el mensaje original
+        const mensajeOriginal = await Message.findById(id);
+        if (!mensajeOriginal) {
+            return res.status(404).json({ error: 'Mensaje no encontrado' });
+        }
+
+        // Configurar el transporter para enviar el correo
+        const transporter = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
+
+        // Plantilla HTML para la respuesta
+        const respuestaHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaea; border-radius: 5px; overflow: hidden;">
+                <div style="background: #4a6bff; padding: 20px; text-align: center;">
+                    <h1 style="color: white; margin: 0;">Respuesta a tu consulta</h1>
+                </div>
+                
+                <div style="padding: 20px;">
+                    <p style="font-size: 16px;">Hola <strong>${mensajeOriginal.name}</strong>,</p>
+                    <p style="font-size: 16px;">Gracias por contactarnos. Aquí está nuestra respuesta a tu consulta:</p>
+                    
+                    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <p style="font-size: 14px; margin: 0; color: #555;"><strong>Tu mensaje original:</strong></p>
+                        <p style="font-size: 14px; margin: 10px 0 0 0; color: #333;">${mensajeOriginal.message}</p>
+                    </div>
+                    
+                    <div style="background: #f0f7ff; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #4a6bff;">
+                        <p style="font-size: 14px; margin: 0; color: #555;"><strong>Nuestra respuesta:</strong></p>
+                        <p style="font-size: 14px; margin: 10px 0 0 0; color: #333;">${respuesta}</p>
+                    </div>
+                    
+                    <p style="font-size: 16px;">Si necesitas más información, no dudes en responder a este correo.</p>
+                    
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eaeaea;">
+                        <p style="font-size: 14px; color: #666;">Equipo de Soporte<br>${process.env.EMAIL_NAME || 'Tu Empresa'}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Enviar el correo con la respuesta
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: [mensajeOriginal.email, process.env.EMAIL_USER], // Enviar copia al admin también
+            subject: `Respuesta a tu consulta - ${process.env.EMAIL_NAME || 'Tu Empresa'}`,
+            text: `Hola ${mensajeOriginal.name},\n\nAquí está nuestra respuesta a tu consulta:\n\nTu mensaje original:\n${mensajeOriginal.message}\n\nNuestra respuesta:\n${respuesta}\n\nEquipo de Soporte,\n${process.env.EMAIL_NAME || 'Tu Empresa'}`,
+            html: respuestaHtml
+        });
+
+        // Actualizar el estado del mensaje a "answered"
+        const updatedMessage = await Message.findByIdAndUpdate(
+            id,
+            { status: 'answered' },
+            { new: true }
+        );
+
+        res.status(200).json({
+            message: 'Respuesta enviada correctamente',
+            data: updatedMessage
+        });
+    } catch (error) {
+        console.error('Error al enviar la respuesta:', error);
+        res.status(500).json({ error: 'Error interno del servidor al enviar la respuesta' });
+    }
+});
+
 module.exports=messageRouter;
