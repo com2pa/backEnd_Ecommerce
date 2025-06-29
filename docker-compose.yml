@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  redis:  # Nombre del servicio (se usará como hostname en la red Docker)
+    image: redis:latest  # Imagen oficial de Redis
+    ports:
+      - "6379:6379"  # Mapea el puerto 6379 del contenedor al host
+    volumes:
+      - redis_data:/data  # Persistencia de datos
+    restart: unless-stopped  # Reinicia el contenedor si falla
+
+volumes:
+  redis_data:  # Volumen para persistir datos de Redis
