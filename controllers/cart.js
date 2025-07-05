@@ -23,7 +23,13 @@ cartRouter.get('/', async (req, res) => {
       { path: 'user', select: 'name' }
         ]
       })
-      .populate('discount')
+       .populate({
+          path: 'discount',
+          populate: {
+            path: 'products',
+            select: '_id' // Solo necesitamos los IDs para verificar
+          }
+        })
       .populate('user', 'name')
       .populate('tasa', 'percentage');    
     

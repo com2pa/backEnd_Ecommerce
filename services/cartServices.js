@@ -36,11 +36,11 @@ const addToCart = async (userId, productId, quantity) => {
     });
 
     // 4. Calcular precio final
-    // const finalPrice = discount
-    //   ? product.price * (1 - discount.percentage / 100)
-    //   : product.price;
+    const finalPrice = discount
+      ? product.price * (1 - discount.percentage / 100)
+      : product.price;
     // 4. Usar el precio original del producto (sin descuento)
-    const finalPrice = product.price;
+    // const finalPrice = product.price;
 
     // 5. Actualizar o añadir item al carrito
     const itemIndex = cart.items.findIndex(
@@ -66,20 +66,24 @@ const addToCart = async (userId, productId, quantity) => {
       cart.discount.push(discount._id);
     }
 
-    // 7.  Calcular subtotal sin descuentos
-    cart.subtotal = cart.items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
-    // 8. Calcular total CON descuentos (pero solo como referencia)
-    const discountAmount = cart.discount.reduce((sum, discount) => {
-      return sum + cart.subtotal * (discount.percentage / 100);
-    }, 0);
+    // // 7.  Calcular subtotal sin descuentos
+    // cart.subtotal = cart.items.reduce(
+    //   (sum, item) => sum + item.price * item.quantity,
+    //   0
+    // );
+    // // 8. Calcular total CON descuentos (pero solo como referencia)
+    // const discountAmount = cart.discount.reduce((sum, discount) => {
+    //   return sum + cart.subtotal * (discount.percentage / 100);
+    // }, 0);
 
     // Aplicar descuentos globales si los hubiera (aquí puedes expandir la lógica)
     //  cart.total = cart.subtotal - discountAmount;
-    cart.total = cart.subtotal;
-
+    // cart.total = cart.subtotal;
+    const { subtotal, discountAmount, discountedSubtotal, total } = calculateCartTotals(cart);
+    cart.subtotal = subtotal;
+    cart.total = total;
+    cart.discountAmount = discountAmount;
+    
     cart.lastUpdated = new Date();
     await cart.save();
 
@@ -92,16 +96,35 @@ const addToCart = async (userId, productId, quantity) => {
 
 // Nueva función para calcular totales 
 const calculateCartTotals = (cart) => {
-
+// Calcular subtotal sin descuentos
   const subtotal = cart.items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
 
-  // Aquí puedes añadir lógica para aplicar descuentos globales
-  const total = subtotal;
+  // Calcular descuentos aplicables
+  let discountAmount = 0;
+  let discountedSubtotal = subtotal;
+  
+  // Verificar si hay descuentos y están vigentes
+  if (cart.discount && cart.discount.length > 0) {
+    const currentDate = new Date();
+    
+    cart.discount.forEach(discount => {
+      if (discount.start_date <= currentDate && discount.end_date >= currentDate) {
+        discountAmount += subtotal * (discount.percentage / 100);
+      }
+    });
+    
+    discountedSubtotal = subtotal - discountAmount;
+  }
 
-  return { subtotal, total };
+  return {
+    subtotal,
+    discountAmount,
+    discountedSubtotal,
+    total: discountedSubtotal
+  };
 };
 
 
