@@ -129,6 +129,15 @@ cartRouter.post('/', async (req, res) => {
     // 3. Delegar lógica de negocio al servicio
       const updatedCart = await cartServices.addToCart(user._id, productId, quantity);
       console.log('actualizacion del carrito', updatedCart)
+      const io =req.app.get('io')
+      // // emitir evento de nuevo mensaje a los client
+      if(io){
+        console.log('Emitting nuevo_mensaje event');
+        io.to('admin-room').emit('nuevo_mensaje', {
+            ...updatedCart.toObject(),
+            notification: `Nuevo mensaje de ${user}`
+        });
+      }
       
 
    res.status(200).json({
