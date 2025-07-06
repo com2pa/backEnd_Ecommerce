@@ -1,12 +1,13 @@
 {
   "name": "ecommerce",
   "version": "1.0.0",
-  "description": "tienda online , nodejs,express,jwtAutenticacion, nodemailer...",
+  "description": "tienda online,nodejs,express,jwtAutenticacion, nodemailer,socket...",
   "license": "MIT",
-  "author": "Ing. Merwil Vegas",
+  "author": "",
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
+    "start": "NODE_ENV=production node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "cross-env NODE_ENV=dev nodemon index.js"
   },
