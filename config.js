@@ -1,6 +1,6 @@
 // https://backcolegio.onrender.comconst 
  PAGE_URL =  process.env.NODE_ENV === 'production'
-    ? 'https://tuappproduccion.com'
+    ? 'https://tuecommerce.onrender.com'
     : 'http://localhost:5173';
 
 const MONGO_URL =
