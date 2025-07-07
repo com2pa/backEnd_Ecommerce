@@ -98,6 +98,12 @@ io.on('connection',(socket)=>{
     socket.join('admin-room');
     console.log(`Admin conectado: ${socket.id}`);
   });
+  // Nuevo evento para actualización de carrito
+    socket.on('actualizar_carrito', (userId) => {
+      console.log(`Carrito actualizado para usuario: ${userId}`);
+      // Emitir a todos los clientes interesados (puedes filtrar por userId si es necesario)
+      io.emit('carrito_actualizado', { userId, timestamp: new Date() });
+    });
   socket.on('disconnect', () => {
     console.log('Cliente desconectado:', socket.id);
   });

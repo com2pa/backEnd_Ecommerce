@@ -131,13 +131,12 @@ cartRouter.post('/', async (req, res) => {
       console.log('actualizacion del carrito', updatedCart)
       const io =req.app.get('io')
       // // emitir evento de nuevo mensaje a los client
-      if(io){
-        console.log('Emitting nuevo_mensaje event');
-        io.to('admin-room').emit('nuevo_mensaje', {
-            ...updatedCart.toObject(),
-            notification: `Nuevo mensaje de ${user}`
+      if (io) {
+        io.emit('carrito_actualizado', { 
+          userId: req.user.id,
+          productId: req.body.productId 
         });
-      }
+    }
       
 
    res.status(200).json({
