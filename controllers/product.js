@@ -177,10 +177,7 @@ productRouter.post('/', userExtractor, upload.single('prodImage'), async (req, r
 
     const newProduct = await createProduct(productData, req.file, user._id);
 
-    return res.status(201).json({
-      message: 'Producto creado exitosamente',
-      product: newProduct
-    });
+    return res.status(201).json(newProduct);
 
   } catch (error) {
     console.error('Error al crear producto:', error);
