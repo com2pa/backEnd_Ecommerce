@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const bcvSchema = new mongoose.Schema({
+  user:{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },
   fecha: {
     type: Date,
     required: true,
@@ -25,6 +29,7 @@ const bcvSchema = new mongoose.Schema({
   },
   fuente_url: {
     type: String,
+    enum: ["https://www.bcv.org.ve", "manual"],
     default: 'https://www.bcv.org.ve'
   },
   publicado: {
