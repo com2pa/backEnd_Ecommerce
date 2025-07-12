@@ -1,5 +1,8 @@
 const bcvRouter = require('express').Router();
-const { getBCV, getBCVRatesWithScrapi, saveCurrentRates } = require('../services/bcvServices');
+const { getBCV, getBCVRatesWithScrapi, saveCurrentRates, createManualRate } = require('../services/bcvServices');
+const User = require('../models/user');
+const BCV = require('../models/bcv');
+const { userExtractor } = require('../middlewares/auth');
 
 // Validar parámetros de moneda
 const validateCurrency = (moneda) => {
@@ -29,8 +32,8 @@ bcvRouter.get('/', async (req, res) => {
 
 
     const tasa = await getBCV(fecha, moneda);
-    
-    res.status(200).json(tasa);
+    const tasa2= await BCV.find({}).populate('user', 'name')
+    res.json(tasa2);
   } catch (error) {
     const statusCode = error.message.includes('no se encontró') ? 404 : 500;
     res.status(statusCode).json({ error: error.message });
@@ -62,10 +65,10 @@ bcvRouter.get('/latest', async (req, res) => {
   }
 });
 // Endpoint para guardar tasas actuales del BCV
-bcvRouter.post('/save', async (req, res) => {
+bcvRouter.post('/save', userExtractor, async (req, res) => {
   try {
-    const {user}=req.user
-    if(user.role !== 'admin'){
+    const {user}=req
+    if(!user){
        return res.status(401).json({
         message: 'No tienes permisos para realizar esta acción',
       });
@@ -77,6 +80,42 @@ bcvRouter.post('/save', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+// crear la tasa de bcv
+// Reemplazar el endpoint POST /create con este código mejorado
+bcvRouter.post('/create', userExtractor, async (req, res) => {
+  try {
+    const { user } = req.user;
+    const { fecha, moneda, tasa_oficial, fuente_url } = req.body;
+    
+    if (!user ) {
+      return res.status(401).json({
+        message: 'No tienes permisos para realizar esta acción',
+      });
+    }
+
+    // Validar campos requeridos
+    if (!fecha || !moneda || !tasa_oficial) {
+      return res.status(400).json({ error: 'Faltan campos requeridos: fecha, moneda o tasa_oficial' });
+    }
+
+    // Crear la tasa usando el servicio
+    const savedRate = await createManualRate({
+      fecha,
+      moneda,
+      tasa_oficial,
+      fuente_url
+    });
+
+    res.status(201).json(savedRate);
+  } catch (error) {
+    console.error('Error en creación manual:', error);
+    const statusCode = error.message.includes('permisos') ? 403 : 
+                      error.message.includes('Faltan') || 
+                      error.message.includes('Moneda no soportada') ? 400 : 
+                      error.message.includes('Ya existe') ? 409 : 500;
+    res.status(statusCode).json({ error: error.message });
   }
 });
 
