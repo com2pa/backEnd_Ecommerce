@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const BCV = require('../models/bcv');
+const User = require('../models/user');
 
 const BCV_URL = 'https://www.bcv.org.ve';
 
@@ -187,8 +188,68 @@ async function saveCurrentRates() {
   }
 }
 
+
+// Agrega esta nueva función para creación manual
+// Optimizar la función createManualRate
+async function createManualRate(rateData) {
+  // Validar datos requeridos
+  const requiredFields = ['fecha', 'moneda', 'tasa_oficial'];
+  const missingFields = requiredFields.filter(field => !rateData[field]);
+  
+  if (missingFields.length > 0) {
+    throw new Error(`Faltan campos requeridos: ${missingFields.join(', ')}`);
+  }
+
+  // Validar moneda
+  const moneda = rateData.moneda.toUpperCase();
+  if (!['USD', 'EUR'].includes(moneda)) {
+    throw new Error('Moneda no soportada. Use USD o EUR');
+  }
+
+  // Validar y normalizar fecha
+  const fecha = new Date(rateData.fecha);
+  if (isNaN(fecha.getTime())) {
+    throw new Error('Formato de fecha inválido');
+  }
+  fecha.setHours(0, 0, 0, 0);
+
+  // Validar tasa numérica
+  const tasa = parseFloat(rateData.tasa_oficial);
+  if (isNaN(tasa) || tasa <= 0) {
+    throw new Error('La tasa debe ser un número positivo');
+  }
+
+  // Verificar duplicados usando el índice compuesto
+  const existingRate = await BCV.findOne({
+    fecha: {
+      $gte: fecha,
+      $lt: new Date(fecha.getTime() + 24 * 60 * 60 * 1000)
+    },
+    moneda
+  }).lean();
+
+  if (existingRate) {
+    throw new Error(`Ya existe una tasa para ${moneda} en la fecha especificada`);
+  }
+  
+  // Crear y guardar la nueva tasa
+  const newRate = new BCV({
+    fecha,
+    tasa_oficial: tasa,
+    moneda,
+    unidad_medida: 'VES',
+    fuente_url: rateData.fuente_url || 'Manual',
+    user: rateData.userId// Opcional: guardar quién creó la tasa
+  });
+
+  await newRate.save();
+  return newRate;
+}
+
+// Actualiza el module.exports para incluir la nueva función
 module.exports = {
   getBCVRatesWithScrapi,
   getBCV,
-  saveCurrentRates
+  saveCurrentRates,
+  createManualRate
 };
