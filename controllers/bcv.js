@@ -67,8 +67,8 @@ bcvRouter.get('/latest', async (req, res) => {
 // Endpoint para guardar tasas actuales del BCV
 bcvRouter.post('/save', userExtractor, async (req, res) => {
   try {
-    const {user}=req
-    if(!user){
+    const user = req.user
+    if(!user || user.role !== 'admin'){
        return res.status(401).json({
         message: 'No tienes permisos para realizar esta acción',
       });
@@ -86,10 +86,10 @@ bcvRouter.post('/save', userExtractor, async (req, res) => {
 // Reemplazar el endpoint POST /create con este código mejorado
 bcvRouter.post('/create', userExtractor, async (req, res) => {
   try {
-    const { user } = req.user;
+    const  user  = req.user;
     const { fecha, moneda, tasa_oficial, fuente_url } = req.body;
     
-    if (!user ) {
+    if (user.role !== 'admin' ) {
       return res.status(401).json({
         message: 'No tienes permisos para realizar esta acción',
       });

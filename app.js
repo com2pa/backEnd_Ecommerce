@@ -105,10 +105,10 @@ const setSocketIO = (socketIO) => {
   app.set('io', io);
 };
 
-app.use(express.static(path.resolve(__dirname, 'dist')));
+// app.use(express.static(path.resolve(__dirname, 'dist')));
 
-app.get('/*', function(request,response){
-  response.sendFile(path.resolve(__dirname, 'dist', 'index.html' ));
-});
+// app.get('/*', function(request,response){
+//   response.sendFile(path.resolve(__dirname, 'dist', 'index.html' ));
+// });
 
 module.exports = {app,setSocketIO};
