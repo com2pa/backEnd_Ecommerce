@@ -10,82 +10,68 @@ const BCV_URL = 'https://www.bcv.org.ve';
  * @returns {Promise<{fecha: Date, tasas: Array, fuente_url: string}>}
  */
 async function getBCVRatesWithScrapi(maxRetries = 3) {
-  let attempts = 0;
-  let lastError;
-  
-  while (attempts < maxRetries) {
-    let browser;
-    try {
-      browser = await chromium.launch({ 
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      });
-      const page = await browser.newPage();
-      
-      // Configuraciones mejoradas
-      await page.setDefaultTimeout(30000);
-      await page.setExtraHTTPHeaders({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept-Language': 'es-ES,es;q=0.9'
-      });
+  let browser;
+  try {
+    browser = await chromium.launch({ 
+      headless: true,
+      channel: 'chrome',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-blink-features=AutomationControlled'
+      ],
+      timeout: 120000
+    });
+    
+    const page = await browser.newPage();
+    await page.setExtraHTTPHeaders({
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    });
+    
+    await page.goto(BCV_URL, { 
+      waitUntil: 'networkidle',
+      timeout: 120000 
+    });
 
-      await page.goto(BCV_URL, { 
-        waitUntil: 'networkidle', 
-        timeout: 30000
-      });
+    // Esperar y asegurar que los elementos están cargados
+    await page.waitForSelector('#dolar', { timeout: 30000 });
+    await page.waitForSelector('#euro', { timeout: 30000 });
 
-      // Esperar selectores con fallback
-      await Promise.race([
-        page.waitForSelector('#dolar .centrado strong', { timeout: 15000 }),
-        page.waitForSelector('#euro .centrado strong', { timeout: 15000 })
-      ]);
+    // Extraer ambas tasas
+    const [tasaDolar, tasaEuro] = await Promise.all([
+      page.$eval('#dolar .centrado strong', el => {
+        return parseFloat(el.textContent.trim().replace(',', '.'));
+      }),
+      page.$eval('#euro .centrado strong', el => {
+        return parseFloat(el.textContent.trim().replace(',', '.'));
+      })
+    ]);
 
-      // Extracción de tasas
-      const rates = {};
-      const currencySelectors = {
-        'USD': '#dolar .centrado strong',
-        'EUR': '#euro .centrado strong'
-      };
+    if (!tasaDolar || isNaN(tasaDolar)) throw new Error('No se pudo obtener la tasa del dólar');
+    if (!tasaEuro || isNaN(tasaEuro)) throw new Error('No se pudo obtener la tasa del euro');
 
-      for (const [currency, selector] of Object.entries(currencySelectors)) {
-      try {
-        const rateText = await page.$eval(selector, el => el.innerText.trim());
-        const rateValue = parseFloat(rateText.replace(/\./g, '').replace(',', '.'));
-        if (!isNaN(rateValue)) {
-          rates[currency] = rateValue;
-        } else {
-          throw new Error(`Tasa inválida para ${currency}`);
-        }
-      } catch (error) {
-        console.error(`Error obteniendo tasa para ${currency}: ${error.message}`);
-        throw new Error(`Fallo al obtener tasa para ${currency}`);
-      }
-    }
-      if (Object.keys(rates).length < 2) {
-      throw new Error('No se pudieron obtener todas las tasas requeridas');
-    }
-
-      return {
-        fecha: new Date(),
-        tasas: Object.entries(rates).map(([moneda, tasa]) => ({
-          moneda,
-          tasa,
+    return {
+      fecha: new Date(),
+      tasas: [
+        {
+          moneda: 'USD',
+          tasa: tasaDolar,
           unidad_medida: 'VES'
-        })),
-        fuente_url: BCV_URL
-      };
-    } catch (error) {
-      lastError = error;
-      attempts++;
-      if (attempts < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 2000 * attempts));
-      }
-    } finally {
-      if (browser) await browser.close();
-    }
+        },
+        {
+          moneda: 'EUR',
+          tasa: tasaEuro,
+          unidad_medida: 'VES'
+        }
+      ],
+      fuente_url: BCV_URL
+    };
+  } catch (error) {
+    console.error('Error en scraping:', error);
+    throw error;
+  } finally {
+    if (browser) await browser.close();
   }
-  
-  throw new Error(`Falló después de ${maxRetries} intentos: ${lastError.message}`);
 }
 
 /**
