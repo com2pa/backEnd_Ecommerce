@@ -26,42 +26,44 @@ const validateDate = (dateString) => {
 
 // Obtener tasa histórica
 bcvRouter.get('/', async (req, res) => {
-  try {
-    const fecha = validateDate(req.query.fecha);
-    const moneda = validateCurrency(req.query.moneda || 'USD' || 'EUR');
-
-
-    const tasa = await getBCV(fecha, moneda);
-    const tasa2= await BCV.find({}).populate('user', 'name')
+  try {    
+    const tasa2= await BCV.find({}).sort({ fecha: -1 }).populate('user', 'name')
+  
     res.json(tasa2);
   } catch (error) {
     const statusCode = error.message.includes('no se encontró') ? 404 : 500;
     res.status(statusCode).json({ error: error.message });
   }
 });
+// mostrando la ultima tasa actual por la fecha 
+bcvRouter.get("/actual",async(req,res)=>{
+  try {
+    const fecha = validateDate(req.query.fecha);
+    const moneda = validateCurrency(req.query.moneda || 'USD' );
+    const tasa = await getBCV(fecha, moneda);
+    console.log(tasa)
+    return res.status(200).json(tasa)
+
+  }catch(error){
+    console.log(error)
+  }
+})
 
 // Obtener tasa más reciente (scraping en tiempo real)
 bcvRouter.get('/latest', async (req, res) => {
   try {
-    const moneda = req.query.moneda ? validateCurrency(req.query.moneda) : null;
     const data = await getBCVRatesWithScrapi();
-
-    // Estructura de respuesta consistente
-    const response = {
+    res.json({
+      success: true,
       fecha: data.fecha,
-      fuente_url: data.fuente_url,
-      tasas: moneda 
-        ? [data.tasas.find(t => t.moneda === moneda)].filter(Boolean)
-        : data.tasas
-    };
-
-    if (moneda && response.tasas.length === 0) {
-      return res.status(404).json({ error: `No se encontró tasa para la moneda ${moneda}` });
-    }
-
-    res.status(200).json(response);
+      tasas: data.tasas // Devuelve todas las tasas (USD y EUR)
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      success: false,
+      error: 'Error al obtener tasa',
+      detalle: error.message
+    });
   }
 });
 // Endpoint para guardar tasas actuales del BCV
