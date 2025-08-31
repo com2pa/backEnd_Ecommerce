@@ -6,40 +6,70 @@ const ROLES = Object.freeze({
   USER: {
     value: 'user',
     description: 'Usuario estándar',
-  },
-  ADMIN: {
-    value: 'admin',
-    description: 'Administrador completo',
-  },
-  EDITOR: {
-    value: 'editor',
-    description: 'Editor de contenido',
+    level: 1
   },
   VIEWER: {
     value: 'viewer',
     description: 'Solo lectura',
+    level: 2
   },
-  SUPERADMIN: {
-    value: 'superadmin',
-    description: 'Super Administrador',
+  EDITOR: {
+    value: 'editor',
+    description: 'Editor de contenido',
+    level: 3
   },
   AUDITOR: {
     value: 'auditor',
     description: 'Consultor SENIAT',
+    level: 4
+  },
+  ADMIN: {
+    value: 'admin',
+    description: 'Administrador completo',
+    level: 5
+  },
+  SUPERADMIN: {
+    value: 'superadmin',
+    description: 'Super Administrador',
+    level: 6
   },
 });
 
+// Obtener nivel de un rol
+const getRoleLevel = (role) => {
+  const roleEntry = Object.values(ROLES).find(r => r.value === role);
+  return roleEntry ? roleEntry.level : 0;
+};
+
 // Validar si un usuario puede cambiar roles
 const canAssignRole = (assignerRole, targetRole) => {
-  // Solo superadmin puede asignar cualquier rol
-  if (assignerRole === ROLES.ADMIN.value) return true;
+  const assignerLevel = getRoleLevel(assignerRole);
+  const targetLevel = getRoleLevel(targetRole);
+  
+  // Solo admin y superadmin pueden asignar roles
+  if (!['admin', 'superadmin'].includes(assignerRole)) {
+    return false;
+  }
 
-  // Admin puede asignar roles menores
+  // Superadmin puede asignar cualquier rol excepto superadmin a otros
+  if (assignerRole === ROLES.SUPERADMIN.value) {
+    return targetRole !== ROLES.SUPERADMIN.value;
+  }
+
+  // Admin solo puede asignar roles con nivel menor al suyo
   if (assignerRole === ROLES.ADMIN.value) {
-    return ![ROLES.ADMIN.value, ROLES.SUPERADMIN.value].includes(targetRole);
+    return targetLevel < getRoleLevel(ROLES.ADMIN.value);
   }
 
   return false;
+};
+
+// Validar si un usuario puede modificar a otro usuario
+const canModifyUser = (assignerRole, targetUserRole) => {
+  const assignerLevel = getRoleLevel(assignerRole);
+  const targetLevel = getRoleLevel(targetUserRole);
+  
+  return assignerLevel > targetLevel;
 };
 
 // Asignar rol a usuario
@@ -51,10 +81,9 @@ const assignUserRole = async (userId, newRole, assignerId) => {
     }
 
     // Validar que el rol sea válido
-    if (!Object.values(ROLES).some((role) => role.value === newRole)) {
-      throw new Error(
-        `Rol inválido. Roles permitidos: ${getAvailableRoles().join(', ')}`
-      );
+    const validRoles = Object.values(ROLES).map(role => role.value);
+    if (!validRoles.includes(newRole)) {
+      throw new Error(`Rol inválido. Roles permitidos: ${validRoles.join(', ')}`);
     }
 
     // Obtener usuario que asigna el rol
@@ -63,13 +92,28 @@ const assignUserRole = async (userId, newRole, assignerId) => {
       throw new Error('Usuario asignador no encontrado');
     }
 
+    // Verificar que el asignador tenga permisos de administrador
+    if (!['admin', 'superadmin'].includes(assigner.role)) {
+      throw new Error('No tienes permisos para gestionar roles');
+    }
+
     // Obtener usuario a modificar
     const user = await User.findById(userId);
     if (!user) {
       throw new Error('Usuario objetivo no encontrado');
     }
 
-    // Validar permisos
+    // Validar permisos para modificar a este usuario específico
+    if (!canModifyUser(assigner.role, user.role)) {
+      await systemLogger.logAccessDenied(
+        assigner,
+        null,
+        `Intento de modificar usuario con rol igual o superior: ${user.role}`
+      );
+      throw new Error('No puedes modificar usuarios con rol igual o superior al tuyo');
+    }
+
+    // Validar permisos para asignar el nuevo rol
     if (!canAssignRole(assigner.role, newRole)) {
       await systemLogger.logAccessDenied(
         assigner,
@@ -79,12 +123,9 @@ const assignUserRole = async (userId, newRole, assignerId) => {
       throw new Error('No tienes permisos para asignar este rol');
     }
 
-    // No permitir auto-asignación de roles superiores
-    if (
-      userId === assignerId.toString() &&
-      ![ROLES.USER.value, ROLES.VIEWER.value].includes(newRole)
-    ) {
-      throw new Error('No puedes auto-asignarte este rol');
+    // No permitir auto-modificación de rol
+    if (userId === assignerId.toString()) {
+      throw new Error('No puedes modificar tu propio rol');
     }
 
     const oldRole = user.role;
@@ -111,6 +152,7 @@ const assignUserRole = async (userId, newRole, assignerId) => {
       {
         oldRole,
         newRole,
+        changedBy: assigner.email
       }
     );
 
@@ -121,6 +163,7 @@ const assignUserRole = async (userId, newRole, assignerId) => {
         newRole,
         changedBy: assignerId,
         changedAt: new Date(),
+        changedByEmail: assigner.email
       },
     };
   } catch (error) {
@@ -129,25 +172,80 @@ const assignUserRole = async (userId, newRole, assignerId) => {
   }
 };
 
+// Obtener todos los usuarios (solo para admin y superadmin)
+const getAllUsers = async (requestorId) => {
+  try {
+    // Verificar permisos del solicitante
+    const requestor = await User.findById(requestorId);
+    if (!requestor || !['admin', 'superadmin'].includes(requestor.role)) {
+      throw new Error('No tienes permisos para ver todos los usuarios');
+    }
+
+    const users = await User.find({})
+      .select('-password -__v')
+      .sort({ createdAt: -1 });
+    
+    return users.map(user => formatUserResponse(user));
+  } catch (error) {
+    console.error('Error al obtener usuarios:', error);
+    throw new Error('Error al cargar los usuarios');
+  }
+};
+
 // Formatear respuesta de usuario
 const formatUserResponse = (user) => {
+  const userObj = user.toObject ? user.toObject() : user;
+  
   return {
-    id: user._id,
-    email: user.email,
-    role: user.role,
+    id: userObj._id || userObj.id,
+    name: userObj.name,
+    lastname: userObj.lastname,
+    email: userObj.email,
+    role: userObj.role,
+    avatar: userObj.avatar,
+    online: userObj.online,
+    verify: userObj.verify,
+    gender: userObj.gender,
+    createdAt: userObj.createdAt,
+    updatedAt: userObj.updatedAt
   };
 };
 
-// Obtener roles disponibles
-const getAvailableRoles = () => {
-  return Object.values(ROLES).map((role) => ({
-    value: role.value,
-    description: role.description,
-  }));
+// Obtener roles disponibles según el rol del solicitante
+const getAvailableRoles = (requestorRole) => {
+  const requestorLevel = getRoleLevel(requestorRole);
+  
+  return Object.values(ROLES)
+    .filter(role => {
+      // Solo admin y superadmin pueden ver todos los roles
+      if (!['admin', 'superadmin'].includes(requestorRole)) {
+        return false;
+      }
+      
+      // Superadmin puede ver todos los roles excepto superadmin para asignar
+      if (requestorRole === ROLES.SUPERADMIN.value) {
+        return role.value !== ROLES.SUPERADMIN.value;
+      }
+      
+      // Admin solo puede ver roles con nivel menor
+      if (requestorRole === ROLES.ADMIN.value) {
+        return role.level < getRoleLevel(ROLES.ADMIN.value);
+      }
+      
+      return false;
+    })
+    .map(role => ({
+      value: role.value,
+      description: role.description,
+      level: role.level
+    }));
 };
 
 module.exports = {
   assignUserRole,
   getAvailableRoles,
+  getAllUsers,
   ROLES,
+  canAssignRole,
+  canModifyUser
 };
